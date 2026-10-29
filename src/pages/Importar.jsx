@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { lerCSV } from '../utils/csvParser'
+import { lerPlanilha } from '../utils/planilhaParser' // <-- NOVO IMPORT
 import { criarReceita } from '../services/receitasService'
 import { criarDespesa } from '../services/despesasService'
 import { Button } from '../components/ui/Button'
-import { Select } from '../components/ui/Select'
 import { CATEGORIAS_DESPESA, CATEGORIAS_RECEITA } from '../utils/categorias'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate } from '../utils/formatDate'
@@ -23,17 +22,20 @@ export default function Importar() {
     setSucesso('')
 
     const reader = new FileReader()
+    
+    // Lê como ArrayBuffer para suportar Excel e CSV
     reader.onload = (event) => {
       try {
-        const texto = event.target.result
-        const transacoes = lerCSV(texto)
-        if (transacoes.length === 0) throw new Error("Nenhuma transação encontrada no arquivo.")
+        const arrayBuffer = event.target.result
+        const transacoes = lerPlanilha(arrayBuffer)
+        if (transacoes.length === 0) throw new Error("Nenhuma transação encontrada na planilha.")
         setDados(transacoes)
       } catch (err) {
         setErro(err.message)
       }
     }
-    reader.readAsText(file, 'UTF-8')
+    
+    reader.readAsArrayBuffer(file)
   }
 
   function handleMudarCategoria(index, novaCategoria) {
@@ -55,7 +57,6 @@ export default function Importar() {
     setErro('')
     
     try {
-      // Importa uma por uma (o Firebase limita lotes, então faremos um loop simples)
       for (const t of dados) {
         if (t.tipo === 'receita') {
           await criarReceita(user.uid, { descricao: t.descricao, valor: t.valor, categoria: t.categoria, data: t.data })
@@ -75,14 +76,24 @@ export default function Importar() {
   return (
     <div className="space-y-4 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Importar Extrato</h1>
-        <p className="text-sm text-gray-600">Traga seus gastos do banco de forma automática</p>
+        <h1 className="text-2xl font-bold text-gray-900">Importar Planilha</h1>
+        <p className="text-sm text-gray-600">Traga seus gastos do Excel, Google Sheets ou CSV</p>
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h3 className="font-semibold mb-2">1. Selecione o arquivo CSV</h3>
-        <p className="text-xs text-gray-500 mb-3">O arquivo deve ter colunas de <strong>Data</strong>, <strong>Descrição</strong> e <strong>Valor</strong>.</p>
-        <input type="file" accept=".csv" onChange={handleFile} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
+        <h3 className="font-semibold mb-2">1. Selecione o arquivo</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          Aceita <strong>.xlsx</strong>, <strong>.xls</strong> e <strong>.csv</strong>.<br/>
+          A primeira linha da planilha precisa ter os títulos: <strong>Data</strong>, <strong>Descrição</strong>, <strong>Valor</strong> (e opcionalmente <strong>Categoria</strong>).
+        </p>
+        
+        {/* Aceita .xlsx, .xls e .csv */}
+        <input 
+          type="file" 
+          accept=".xlsx, .xls, .csv" 
+          onChange={handleFile} 
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" 
+        />
         {erro && <p className="text-red-500 text-sm mt-2">{erro}</p>}
         {sucesso && <p className="text-green-600 font-bold text-sm mt-2">{sucesso}</p>}
       </div>
