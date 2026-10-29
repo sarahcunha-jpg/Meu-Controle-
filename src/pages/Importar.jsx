@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { lerPlanilha } from '../utils/planilhaParser' // <-- NOVO IMPORT
+import { lerPlanilha } from '../utils/planilhaParser'
 import { criarReceita } from '../services/receitasService'
 import { criarDespesa } from '../services/despesasService'
+import { criarRecorrente } from '../services/recorrentesService'
 import { Button } from '../components/ui/Button'
 import { CATEGORIAS_DESPESA, CATEGORIAS_RECEITA } from '../utils/categorias'
 import { formatCurrency } from '../utils/formatCurrency'
@@ -23,7 +24,6 @@ export default function Importar() {
 
     const reader = new FileReader()
     
-    // Lê como ArrayBuffer para suportar Excel e CSV
     reader.onload = (event) => {
       try {
         const arrayBuffer = event.target.result
@@ -34,20 +34,19 @@ export default function Importar() {
         setErro(err.message)
       }
     }
-    
     reader.readAsArrayBuffer(file)
-  }
-
-  function handleMudarCategoria(index, novaCategoria) {
-    const novosDados = [...dados]
-    novosDados[index].categoria = novaCategoria
-    setDados(novosDados)
   }
 
   function handleMudarTipo(index, novoTipo) {
     const novosDados = [...dados]
     novosDados[index].tipo = novoTipo
-    novosDados[index].categoria = novoTipo === 'despesa' ? 'Outros' : 'Salário'
+    setDados(novosDados)
+  }
+
+  function handleMudarCategoria(index, novaCategoria) {
+    const novosDados = [...dados]
+    novosDados[index].categoria = novaCategoria
+    novosDados[index].descricao = novaCategoria // Atualiza a descrição também
     setDados(novosDados)
   }
 
@@ -60,6 +59,8 @@ export default function Importar() {
       for (const t of dados) {
         if (t.tipo === 'receita') {
           await criarReceita(user.uid, { descricao: t.descricao, valor: t.valor, categoria: t.categoria, data: t.data })
+        } else if (t.tipo === 'recorrente') {
+          await criarRecorrente(user.uid, { nome: t.descricao, valor: t.valor, categoria: t.categoria })
         } else {
           await criarDespesa(user.uid, { descricao: t.descricao, valor: t.valor, categoria: t.categoria, data: t.data, formaPagamento: 'Transferência' })
         }
@@ -67,7 +68,7 @@ export default function Importar() {
       setSucesso(`${dados.length} lançamentos importados com sucesso!`)
       setDados([])
     } catch (err) {
-      setErro('Erro ao salvar no banco: ' + err.message)
+      setErro('Erro ao salvar: ' + err.message)
     } finally {
       setLoading(false)
     }
@@ -77,17 +78,13 @@ export default function Importar() {
     <div className="space-y-4 max-w-5xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Importar Planilha</h1>
-        <p className="text-sm text-gray-600">Traga seus gastos do Excel, Google Sheets ou CSV</p>
+        <p className="text-sm text-gray-600">Traga seus gastos do Excel ou Google Sheets</p>
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <h3 className="font-semibold mb-2">1. Selecione o arquivo</h3>
-        <p className="text-xs text-gray-500 mb-3">
-          Aceita <strong>.xlsx</strong>, <strong>.xls</strong> e <strong>.csv</strong>.<br/>
-          A primeira linha da planilha precisa ter os títulos: <strong>Data</strong>, <strong>Descrição</strong>, <strong>Valor</strong> (e opcionalmente <strong>Categoria</strong>).
-        </p>
+        <p className="text-xs text-gray-500 mb-3">Aceita <strong>.xlsx</strong>, <strong>.xls</strong> e <strong>.csv</strong>.</p>
         
-        {/* Aceita .xlsx, .xls e .csv */}
         <input 
           type="file" 
           accept=".xlsx, .xls, .csv" 
@@ -112,7 +109,7 @@ export default function Importar() {
                   <tr>
                     <th className="px-4 py-3">Data</th>
                     <th className="px-4 py-3">Descrição</th>
-                    <th className="px-4 py-3">Tipo</th>
+                    <th className="px-4 py-3">Vai para...</th>
                     <th className="px-4 py-3">Categoria</th>
                     <th className="px-4 py-3 text-right">Valor</th>
                   </tr>
@@ -123,9 +120,10 @@ export default function Importar() {
                       <td className="px-4 py-2 whitespace-nowrap">{formatDate(t.data)}</td>
                       <td className="px-4 py-2">{t.descricao}</td>
                       <td className="px-4 py-2">
-                        <select value={t.tipo} onChange={e => handleMudarTipo(i, e.target.value)} className="text-xs border rounded p-1">
+                        <select value={t.tipo} onChange={e => handleMudarTipo(i, e.target.value)} className="text-xs border rounded p-1 font-bold text-primary-700">
                           <option value="despesa">Despesa</option>
                           <option value="receita">Receita</option>
+                          <option value="recorrente">Conta Recorrente</option>
                         </select>
                       </td>
                       <td className="px-4 py-2">
