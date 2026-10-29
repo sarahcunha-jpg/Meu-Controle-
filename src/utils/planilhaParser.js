@@ -7,7 +7,7 @@ const MESES_MAP = {
 }
 
 const KW_RECEITA = ['salario', 'salário', 'freela', 'vale', 'presente', 'investimento', 'rendimento', 'entrada', 'receita']
-const KW_RECORRENTE = ['aluguel', 'agua', 'água', 'luz', 'internet', 'celular', 'condominio', 'condomínio', 'academia']
+const KW_RECORRENTE = ['aluguel', 'agua', 'água', 'luz', 'internet', 'celular', 'condominio', 'condomínio', 'academia', 'netflix', 'spotify']
 const KW_PARCELADA = ['nubank', 'cartao', 'cartão', 'santander', 'renner', 'shopee', 'riachuelo', 'oboticario', 'empréstimo', 'emprestimo']
 
 function classificar(nome, isLeft) {
@@ -15,19 +15,24 @@ function classificar(nome, isLeft) {
   if (KW_RECEITA.some(k => lower.includes(k))) return 'receita'
   if (KW_RECORRENTE.some(k => lower.includes(k))) return 'recorrente'
   if (KW_PARCELADA.some(k => lower.includes(k))) return 'parcelada'
-  if (isLeft) return 'receita' // Se estiver na esquerda e não for nada específico, é receita
+  if (isLeft) return 'receita' // Se estiver na esquerda, é receita
   return 'despesa'
 }
 
-// Função super segura para ler valores
-function parseCurrency(val) {
-  if (typeof val === 'number') return val
+// BLINDAGEM DE VALORES: Lê números puros ou strings com vírgula/ponto
+function limparValor(val) {
+  if (typeof val === 'number') return Math.abs(val)
   if (!val) return 0
+  
   let str = String(val).replace(/[R$\s]/g, '')
+  
+  // Se tem vírgula, é o padrão brasileiro (ex: 1.234,56)
   if (str.includes(',')) {
     str = str.replace(/\./g, '').replace(',', '.')
   }
-  return Number(str)
+  
+  const num = Number(str)
+  return isNaN(num) ? 0 : Math.abs(num)
 }
 
 export function lerPlanilha(arrayBuffer) {
@@ -43,11 +48,12 @@ export function lerPlanilha(arrayBuffer) {
     if (nomeAbaLower.includes('resumo') || nomeAbaLower.includes('página') || !mesReferencia) return
 
     const worksheet = workbook.Sheets[sheetName]
-    const linhas = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' })
+    
+    // MUDANÇA CRUCIAL AQUI: raw: true pega o valor puro (ex: 450), não o texto (ex: "450,00")
+    const linhas = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, dateNF: 'yyyy-mm-dd' })
 
     if (linhas.length === 0) return
 
-    // Tenta achar o ano no topo da aba
     for(let i=0; i < Math.min(10, linhas.length); i++) {
        const texto = linhas[i]?.join(' ')
        const matchAno = texto?.match(/20\d{2}/)
@@ -77,14 +83,15 @@ export function lerPlanilha(arrayBuffer) {
           if (!linha) continue
 
           let catVal = String(linha[idxCat] || '').trim()
-          const valorNum = parseCurrency(linha[idxValor])
+          const valorNum = limparValor(linha[idxValor])
           
-          if (isNaN(valorNum) || valorNum === 0) continue
+          if (valorNum === 0) continue
 
           if (!catVal) catVal = isLeftSide ? 'Receita Diversa' : 'Despesa Diversa'
 
           let dataFormatada = ''
           const dataVal = linha[idxData]
+          
           try {
             if (dataVal instanceof Date) {
               dataFormatada = dataVal.toISOString().slice(0, 10)
@@ -99,7 +106,6 @@ export function lerPlanilha(arrayBuffer) {
             }
           } catch(e) { }
 
-          // Se não tiver data, usa o dia 1º do mês da aba
           if (!dataFormatada || dataFormatada.includes('NaN')) {
             dataFormatada = `${anoReferencia}-${String(mesReferencia).padStart(2, '0')}-01`
           }
@@ -111,7 +117,7 @@ export function lerPlanilha(arrayBuffer) {
           resultado.push({
             data: dataFormatada,
             descricao: catVal, 
-            valor: Math.abs(valorNum),
+            valor: valorNum,
             tipo: classificar(catVal, isLeftSide),
             categoria: catVal
           })

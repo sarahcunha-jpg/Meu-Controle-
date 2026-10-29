@@ -61,7 +61,6 @@ export default function Importar() {
         } else if (t.tipo === 'recorrente') {
           await criarRecorrente(user.uid, { nome: t.descricao, valor: t.valor, categoria: t.categoria })
         } else {
-          // Se for despesa ou parcelada, vai para despesas (a parcelada a gente marca com forma de pagamento)
           const formaPag = t.tipo === 'parcelada' ? 'Crédito' : 'Transferência'
           await criarDespesa(user.uid, { descricao: t.descricao, valor: t.valor, categoria: t.categoria, data: t.data, formaPagamento: formaPag })
         }
