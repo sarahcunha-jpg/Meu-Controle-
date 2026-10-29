@@ -15,22 +15,15 @@ function classificar(nome, isLeft) {
   if (KW_RECEITA.some(k => lower.includes(k))) return 'receita'
   if (KW_RECORRENTE.some(k => lower.includes(k))) return 'recorrente'
   if (KW_PARCELADA.some(k => lower.includes(k))) return 'parcelada'
-  if (isLeft) return 'receita' // Se estiver na esquerda, é receita
+  if (isLeft) return 'receita'
   return 'despesa'
 }
 
-// BLINDAGEM DE VALORES: Lê números puros ou strings com vírgula/ponto
 function limparValor(val) {
   if (typeof val === 'number') return Math.abs(val)
   if (!val) return 0
-  
   let str = String(val).replace(/[R$\s]/g, '')
-  
-  // Se tem vírgula, é o padrão brasileiro (ex: 1.234,56)
-  if (str.includes(',')) {
-    str = str.replace(/\./g, '').replace(',', '.')
-  }
-  
+  if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.')
   const num = Number(str)
   return isNaN(num) ? 0 : Math.abs(num)
 }
@@ -49,8 +42,8 @@ export function lerPlanilha(arrayBuffer) {
 
     const worksheet = workbook.Sheets[sheetName]
     
-    // MUDANÇA CRUCIAL AQUI: raw: true pega o valor puro (ex: 450), não o texto (ex: "450,00")
-    const linhas = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, dateNF: 'yyyy-mm-dd' })
+    // raw: false garante que datas venham como string (DD/MM/YYYY) e não como número
+    const linhas = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' })
 
     if (linhas.length === 0) return
 
@@ -86,27 +79,20 @@ export function lerPlanilha(arrayBuffer) {
           const valorNum = limparValor(linha[idxValor])
           
           if (valorNum === 0) continue
-
           if (!catVal) catVal = isLeftSide ? 'Receita Diversa' : 'Despesa Diversa'
 
           let dataFormatada = ''
-          const dataVal = linha[idxData]
+          const dataVal = String(linha[idxData] || '').trim()
           
-          try {
-            if (dataVal instanceof Date) {
-              dataFormatada = dataVal.toISOString().slice(0, 10)
-            } else if (typeof dataVal === 'string' && dataVal.includes('/')) {
-              const [d, m, a] = dataVal.split('/')
-              dataFormatada = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
-            } else if (typeof dataVal === 'string' && dataVal.includes('-')) {
-              dataFormatada = dataVal.slice(0, 10)
-            } else if (typeof dataVal === 'number') {
-              const date = new Date(Math.round((dataVal - 25569) * 86400 * 1000))
-              dataFormatada = date.toISOString().slice(0, 10)
-            }
-          } catch(e) { }
+          if (dataVal && dataVal.includes('/')) {
+             const [d, m, a] = dataVal.split('/')
+             dataFormatada = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+          } else if (dataVal && dataVal.includes('-')) {
+             dataFormatada = dataVal.slice(0, 10)
+          }
 
-          if (!dataFormatada || dataFormatada.includes('NaN')) {
+          // Se a data for inválida ou vazia, joga pro dia 1º do mês da aba
+          if (!dataFormatada || dataFormatada.includes('Invalid')) {
             dataFormatada = `${anoReferencia}-${String(mesReferencia).padStart(2, '0')}-01`
           }
 
