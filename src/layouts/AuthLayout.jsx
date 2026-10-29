@@ -4,7 +4,7 @@ export function AuthLayout({ children }) {
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-primary-700">Meu Controle+</h1>
-          <p className="text-sm text-gray-600 mt-1">Seu dinheiro organizado. Suas decisões mais inteligentes.</p>
+          <p className="text-sm text-gray-600 mt-1">Seu dinheiro organizado. (TESTE VERCEL OK)</p>
         </div>
         <div className="bg-white rounded-2xl shadow-xl p-6">{children}</div>
       </div>
