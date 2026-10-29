@@ -23,7 +23,6 @@ export default function Importar() {
     setSucesso('')
 
     const reader = new FileReader()
-    
     reader.onload = (event) => {
       try {
         const arrayBuffer = event.target.result
@@ -46,7 +45,7 @@ export default function Importar() {
   function handleMudarCategoria(index, novaCategoria) {
     const novosDados = [...dados]
     novosDados[index].categoria = novaCategoria
-    novosDados[index].descricao = novaCategoria // Atualiza a descrição também
+    novosDados[index].descricao = novaCategoria
     setDados(novosDados)
   }
 
@@ -62,7 +61,9 @@ export default function Importar() {
         } else if (t.tipo === 'recorrente') {
           await criarRecorrente(user.uid, { nome: t.descricao, valor: t.valor, categoria: t.categoria })
         } else {
-          await criarDespesa(user.uid, { descricao: t.descricao, valor: t.valor, categoria: t.categoria, data: t.data, formaPagamento: 'Transferência' })
+          // Se for despesa ou parcelada, vai para despesas (a parcelada a gente marca com forma de pagamento)
+          const formaPag = t.tipo === 'parcelada' ? 'Crédito' : 'Transferência'
+          await criarDespesa(user.uid, { descricao: t.descricao, valor: t.valor, categoria: t.categoria, data: t.data, formaPagamento: formaPag })
         }
       }
       setSucesso(`${dados.length} lançamentos importados com sucesso!`)
@@ -124,6 +125,7 @@ export default function Importar() {
                           <option value="despesa">Despesa</option>
                           <option value="receita">Receita</option>
                           <option value="recorrente">Conta Recorrente</option>
+                          <option value="parcelada">Compra Parcelada</option>
                         </select>
                       </td>
                       <td className="px-4 py-2">
