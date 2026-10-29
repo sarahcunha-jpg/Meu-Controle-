@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { logout } from '../services/authService'
 import { useAuth } from '../hooks/useAuth'
+import { useDate } from '../contexts/DateContext'
 
 const links = [
   { to: '/', label: 'Dashboard' },
@@ -10,16 +11,20 @@ const links = [
   { to: '/receitas', label: 'Receitas' },
   { to: '/despesas', label: 'Despesas' },
   { to: '/cartoes', label: 'Cartões' },
-  { to: '/compras', label: 'Compras Parceladas' },
+  { to: '/compras', label: 'Compras e Parcelas' },
   { to: '/recorrentes', label: 'Contas Recorrentes' },
   { to: '/orcamentos', label: 'Orçamentos' },
   { to: '/metas', label: 'Metas' },
-  { to: '/relatorios', label: 'Relatórios' }, // <-- ADICIONADO AQUI
+  { to: '/relatorios', label: 'Relatórios' },
+  { to: '/importar', label: 'Importar Extrato' }, // <-- ADICIONADO
   { to: '/configuracoes', label: 'Configurações' }
 ]
 
+const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
 export function AppLayout({ children }) {
   const { user } = useAuth()
+  const { mes, setMes, ano, setAno } = useDate()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
 
@@ -29,10 +34,20 @@ export function AppLayout({ children }) {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button className="md:hidden text-2xl text-gray-700" onClick={() => setOpen(!open)}>☰</button>
-            <span className="font-bold text-primary-700">Meu Controle+</span>
+            <span className="font-bold text-primary-700 hidden sm:block">Meu Controle+</span>
+            
+            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+              <select value={mes} onChange={e => setMes(Number(e.target.value))} className="bg-transparent text-sm font-bold text-gray-700 outline-none cursor-pointer">
+                {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+              </select>
+              <select value={ano} onChange={e => setAno(Number(e.target.value))} className="bg-transparent text-sm font-bold text-primary-700 outline-none cursor-pointer border-l border-gray-300 pl-2">
+                {[ano - 1, ano, ano + 1, ano + 2].map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
           </div>
+          
           <div className="hidden md:flex items-center gap-4 text-sm text-gray-600">
             <span>{user?.displayName || user?.email}</span>
             <button onClick={handleLogout} className="text-red-600 hover:underline">Sair</button>
