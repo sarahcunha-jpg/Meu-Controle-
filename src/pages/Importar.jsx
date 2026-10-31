@@ -19,7 +19,6 @@ export default function Importar() {
   const [loading, setLoading] = useState(false)
   const [sucesso, setSucesso] = useState('')
   
-  // Estados para o Modal de Duplicados
   const [mostrarModalDup, setMostrarModalDup] = useState(false)
   const [contagemDup, setContagemDup] = useState({ novos: 0, duplicados: 0, listaNovos: [], listaDups: [] })
 
@@ -63,8 +62,16 @@ export default function Importar() {
     setDados(novosDados)
   }
 
-  // 1. O usuário clica em Confirmar e o sistema CHECA duplicados
+  // FUNÇÃO NOVA: Excluir linha da importação
+  function handleExcluirLinha(index) {
+    const novosDados = [...dados]
+    novosDados.splice(index, 1)
+    setDados(novosDados)
+  }
+
   function prepararImportacao() {
+    if (dados.length === 0) return
+
     const hashExistentes = new Set()
     existentes.receitas.forEach(r => hashExistentes.add(`${r.data}-${r.descricao}-${r.valor}-receita`))
     existentes.despesas.forEach(d => hashExistentes.add(`${d.data}-${d.descricao}-${d.valor}-despesa`))
@@ -84,10 +91,9 @@ export default function Importar() {
     })
 
     setContagemDup({ novos: listaNovos.length, duplicados: listaDups.length, listaNovos, listaDups })
-    setMostrarModalDup(true) // Abre o modal bonito em vez do alert
+    setMostrarModalDup(true)
   }
 
-  // 2. O usuário escolhe se importa só os novos ou tudo
   async function executarImportacao(importarDuplicados) {
     setMostrarModalDup(false)
     setLoading(true)
@@ -104,13 +110,10 @@ export default function Importar() {
     }
 
     try {
-      // Garante que existe um cartão para compras parceladas
       let cartaoId = existentes.cartoes[0]?.id
       if (paraImportar.some(t => t.tipo === 'parcelada') && !cartaoId) {
         await criarCartao(user.uid, { nome: 'Cartão Importado', limite: 10000, diaFechamento: 1, diaVencimento: 10 })
         alert('Criamos um cartão "Cartão Importado" com limite de R$ 10.000 para receber as compras parceladas.')
-        // Como o onSnapshot vai demorar milissegundos, vamos assumir que o primeiro cartão será o que acabamos de criar
-        // E para garantir que ele seja usado, faremos uma checagem local
       }
 
       for (const t of paraImportar) {
@@ -119,9 +122,7 @@ export default function Importar() {
         } else if (t.tipo === 'recorrente') {
           await criarRecorrente(user.uid, { nome: t.descricao, valor: t.valor, categoria: t.categoria })
         } else if (t.tipo === 'parcelada') {
-          // Se for parcelada e o cartão ainda não estiver no estado (acabou de ser criado), pega um id padrão ou recarrega
-          const idCartao = existentes.cartoes[0]?.id || existentes.cartoes[0]?.id // Em caso de falha, cai como despesa
-          
+          const idCartao = existentes.cartoes[0]?.id
           if (idCartao) {
              await criarCompraParcelada(user.uid, { descricao: t.descricao, valorTotal: t.valor, numParcelas: 1, cartaoId: idCartao, dataCompra: t.data })
           } else {
@@ -158,8 +159,8 @@ export default function Importar() {
       {dados.length > 0 && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-lg">2. Revise os lançamentos</h3>
-            <p className="text-sm text-gray-500">Confira se o "Vai para..." está correto.</p>
+            <h3 className="font-semibold text-lg">2. Revise os lançamentos ({dados.length})</h3>
+            <p className="text-sm text-gray-500">Confira os dados ou exclua o que não quiser.</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -172,6 +173,7 @@ export default function Importar() {
                     <th className="px-4 py-3">Vai para...</th>
                     <th className="px-4 py-3">Categoria</th>
                     <th className="px-4 py-3 text-right">Valor</th>
+                    <th className="px-4 py-3 text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -195,6 +197,16 @@ export default function Importar() {
                       <td className={`px-4 py-2 text-right font-bold ${t.tipo === 'receita' ? 'text-green-600' : 'text-red-600'}`}>
                         {t.tipo === 'receita' ? '+' : '-'}{formatCurrency(t.valor)}
                       </td>
+                      <td className="px-4 py-2 text-center">
+                        {/* BOTÃO DE EXCLUIR ADICIONADO AQUI */}
+                        <button 
+                          onClick={() => handleExcluirLinha(i)} 
+                          className="text-red-500 hover:text-red-700 font-bold px-2 py-1 bg-red-50 rounded"
+                          title="Excluir esta linha"
+                        >
+                          X
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -203,13 +215,13 @@ export default function Importar() {
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setDados([])}>Cancelar</Button>
+            <Button variant="secondary" onClick={() => setDados([])}>Cancelar Tudo</Button>
             <Button onClick={prepararImportacao} disabled={loading}>Verificar e Importar</Button>
           </div>
         </div>
       )}
 
-      {/* MODAL BONITO DE DUPLICADOS */}
+      {/* MODAL DE DUPLICADOS */}
       <Modal open={mostrarModalDup} onClose={() => setMostrarModalDup(false)} title="Aviso de Duplicados">
         <div className="space-y-4">
           <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg border border-yellow-200 text-sm">
