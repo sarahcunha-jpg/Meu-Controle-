@@ -62,7 +62,6 @@ export default function Importar() {
     setDados(novosDados)
   }
 
-  // FUNÇÃO NOVA: Excluir linha da importação
   function handleExcluirLinha(index) {
     const novosDados = [...dados]
     novosDados.splice(index, 1)
@@ -111,9 +110,12 @@ export default function Importar() {
 
     try {
       let cartaoId = existentes.cartoes[0]?.id
+      let diaVencCartao = existentes.cartoes[0]?.diaVencimento || 10
+
       if (paraImportar.some(t => t.tipo === 'parcelada') && !cartaoId) {
         await criarCartao(user.uid, { nome: 'Cartão Importado', limite: 10000, diaFechamento: 1, diaVencimento: 10 })
         alert('Criamos um cartão "Cartão Importado" com limite de R$ 10.000 para receber as compras parceladas.')
+        cartaoId = 'novo-cartao-importado' // Fallback
       }
 
       for (const t of paraImportar) {
@@ -122,9 +124,15 @@ export default function Importar() {
         } else if (t.tipo === 'recorrente') {
           await criarRecorrente(user.uid, { nome: t.descricao, valor: t.valor, categoria: t.categoria })
         } else if (t.tipo === 'parcelada') {
-          const idCartao = existentes.cartoes[0]?.id
-          if (idCartao) {
-             await criarCompraParcelada(user.uid, { descricao: t.descricao, valorTotal: t.valor, numParcelas: 1, cartaoId: idCartao, dataCompra: t.data })
+          if (cartaoId && cartaoId !== 'novo-cartao-importado') {
+             await criarCompraParcelada(user.uid, { 
+                descricao: t.descricao, 
+                valorTotal: t.valor, 
+                numParcelas: 1, 
+                cartaoId: cartaoId, 
+                dataCompra: t.data,
+                diaVencimento: diaVencCartao // <-- CORREÇÃO AQUI
+             })
           } else {
              await criarDespesa(user.uid, { descricao: t.descricao, valor: t.valor, categoria: t.categoria, data: t.data, formaPagamento: 'Crédito' })
           }
@@ -198,7 +206,6 @@ export default function Importar() {
                         {t.tipo === 'receita' ? '+' : '-'}{formatCurrency(t.valor)}
                       </td>
                       <td className="px-4 py-2 text-center">
-                        {/* BOTÃO DE EXCLUIR ADICIONADO AQUI */}
                         <button 
                           onClick={() => handleExcluirLinha(i)} 
                           className="text-red-500 hover:text-red-700 font-bold px-2 py-1 bg-red-50 rounded"
@@ -221,7 +228,6 @@ export default function Importar() {
         </div>
       )}
 
-      {/* MODAL DE DUPLICADOS */}
       <Modal open={mostrarModalDup} onClose={() => setMostrarModalDup(false)} title="Aviso de Duplicados">
         <div className="space-y-4">
           <div className="bg-yellow-50 text-yellow-800 p-4 rounded-lg border border-yellow-200 text-sm">
