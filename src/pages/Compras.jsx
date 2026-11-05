@@ -21,8 +21,8 @@ export default function Compras() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   
-  const dataPadrao = `${ano}-${String(mes + 1).padStart(2, '0')}-${new Date().getDate()}`
-  const [form, setForm] = useState({ descricao: '', valorTotal: '', numParcelas: 1, cartaoId: '', dataCompra: dataPadrao })
+  // Inicializa o form vazio (a data será definida ao abrir o modal)
+  const [form, setForm] = useState({ descricao: '', valorTotal: '', numParcelas: 1, cartaoId: '', dataCompra: '' })
 
   useEffect(() => {
     if (!user) return
@@ -36,6 +36,17 @@ export default function Compras() {
     if (cartoes.length > 0 && !form.cartaoId) setForm(f => ({...f, cartaoId: cartoes[0].id}))
   }, [cartoes])
 
+  // Função para abrir o modal já com a data do mês que está sendo visualizado
+  function abrirModal() {
+    const hoje = new Date()
+    const diaHoje = String(hoje.getDate()).padStart(2, '0')
+    const mesFormatado = String(mes + 1).padStart(2, '0')
+    const novaData = `${ano}-${mesFormatado}-${diaHoje}`
+    
+    setForm(prev => ({ ...prev, dataCompra: novaData }))
+    setOpen(true)
+  }
+
   const parcelasDoMes = parcelas.filter(p => {
     if (!p.dataVencimento) return false
     const [y, m] = p.dataVencimento.split('-')
@@ -45,8 +56,8 @@ export default function Compras() {
   async function handleSubmit(e) {
     e.preventDefault()
     if (!form.cartaoId) return alert('Cadastre um cartão primeiro.')
+    if (!form.dataCompra) return alert('Preencha a data da compra.')
     
-    // Pega o cartão para saber o dia do vencimento
     const cartaoSelecionado = cartoes.find(c => c.id === form.cartaoId)
 
     setLoading(true)
@@ -57,7 +68,7 @@ export default function Compras() {
         numParcelas: Number(form.numParcelas),
         cartaoId: form.cartaoId,
         dataCompra: form.dataCompra,
-        diaVencimento: cartaoSelecionado?.diaVencimento || 10 // Passa o dia do vencimento
+        diaVencimento: cartaoSelecionado?.diaVencimento || 10
       })
       setOpen(false)
       setForm({ ...form, descricao: '', valorTotal: '', numParcelas: 1 })
@@ -73,7 +84,7 @@ export default function Compras() {
           <h1 className="text-2xl font-bold text-gray-900">Faturas e Parcelas</h1>
           <p className="text-sm text-gray-600">Vencimentos de {MESES[mes]} de {ano}</p>
         </div>
-        <Button onClick={() => { setForm({...form, dataCompra: dataPadrao}); setOpen(true) }}>+ Nova Compra</Button>
+        <Button onClick={abrirModal}>+ Nova Compra</Button>
       </div>
 
       <div className="bg-orange-50 rounded-xl border border-orange-100 p-4">
