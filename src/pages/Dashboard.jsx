@@ -7,7 +7,7 @@ import { useDate } from '../contexts/DateContext'
 import { observarReceitas } from '../services/receitasService'
 import { observarDespesas } from '../services/despesasService'
 import { observarParcelas } from '../services/comprasService'
-import { observarRecorrentes } from '../services/recorrentesService'
+import { observarRecorrentes, observarPuladas } from '../services/recorrentesService' // <-- Importando observarPuladas
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 
 const CORES = ['#0ea5e9', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#64748b']
@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [despesas, setDespesas] = useState([])
   const [parcelas, setParcelas] = useState([])
   const [recorrentes, setRecorrentes] = useState([])
+  const [puladas, setPuladas] = useState([]) // <-- Novo estado para as contas puladas
 
   useEffect(() => {
     if (!user) return
@@ -27,7 +28,8 @@ export default function Dashboard() {
     const u2 = observarDespesas(user.uid, setDespesas)
     const u3 = observarParcelas(user.uid, setParcelas)
     const u4 = observarRecorrentes(user.uid, setRecorrentes)
-    return () => { u1(); u2(); u3(); u4() }
+    const u5 = observarPuladas(user.uid, setPuladas) // <-- Buscando do banco
+    return () => { u1(); u2(); u3(); u4(); u5() }
   }, [user])
 
   // Cálculos focados no mês selecionado
@@ -35,12 +37,15 @@ export default function Dashboard() {
   const despesasMes = filtrarMes(despesas, dataReferencia)
   const porCategoria = gastosPorCategoria(despesasMes)
   
-  // Parcelas que vencem no mês selecionado
-  const parcelasMes = filtrarMes(parcelas, dataReferencia, 'dataVencimento')
+  // Parcelas que vencem no mês selecionado (ignorando as puladas)
+  const parcelasMes = filtrarMes(parcelas, dataReferencia, 'dataVencimento').filter(p => p.status !== 'pulada')
   const totalParcelasMes = parcelasMes.reduce((a, p) => a + Number(p.valor), 0)
 
-  // Previsão (Mês selecionado + Contas fixas)
-  const totalRecorrentes = recorrentes.reduce((a, r) => a + Number(r.valor), 0)
+  // Contas Recorrentes: Soma apenas as que NÃO foram puladas neste mês/ano
+  const totalRecorrentes = recorrentes
+    .filter(r => !puladas.some(p => p.recorrenteId === r.id && p.ano === ano && p.mes === (mes + 1)))
+    .reduce((a, r) => a + Number(r.valor), 0)
+
   const saldoPrevisto = resumo.saldoMes - totalRecorrentes - totalParcelasMes
 
   return (
