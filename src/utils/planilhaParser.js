@@ -28,6 +28,43 @@ function limparValor(val) {
   return isNaN(num) ? 0 : Math.abs(num)
 }
 
+// BLINDAGEM DE DATA
+function converterData(dataVal, mesRef, anoRef) {
+  let dia = '01';
+  let mes = String(mesRef).padStart(2, '0');
+  let ano = anoRef;
+
+  if (!dataVal) return `${ano}-${mes}-${dia}`; // Se estiver vazio, dia 1º
+
+  // Se for data do Excel (número serial)
+  if (typeof dataVal === 'number') {
+    const date = new Date(Math.round((dataVal - 25569) * 86400 * 1000));
+    if (!isNaN(date.getTime())) return date.toISOString().slice(0, 10);
+  }
+
+  // Se for um objeto Date
+  if (dataVal instanceof Date) {
+    if (!isNaN(dataVal.getTime())) return dataVal.toISOString().slice(0, 10);
+  }
+
+  // Se for string (ex: "20/11/2026" ou "2026-11-20")
+  const str = String(dataVal).trim();
+  if (str.includes('/')) {
+    const partes = str.split('/');
+    if (partes.length >= 3) {
+      dia = partes[0].padStart(2, '0');
+      mes = partes[1].padStart(2, '0');
+      ano = partes[2];
+      return `${ano}-${mes}-${dia}`;
+    }
+  } else if (str.includes('-')) {
+    return str.slice(0, 10);
+  }
+
+  // Se chegou até aqui e não conseguiu, usa o dia 1º do mês da aba
+  return `${ano}-${mes}-${dia}`;
+}
+
 export function lerPlanilha(arrayBuffer) {
   const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true })
   const resultado = []
@@ -42,11 +79,12 @@ export function lerPlanilha(arrayBuffer) {
 
     const worksheet = workbook.Sheets[sheetName]
     
-    // raw: false garante que datas venham como string (DD/MM/YYYY) e não como número
-    const linhas = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, dateNF: 'dd/mm/yyyy' })
+    // raw: true lê os números crus do excel (sem formatar como texto)
+    const linhas = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true })
 
     if (linhas.length === 0) return
 
+    // Tenta achar o ano no topo da planilha
     for(let i=0; i < Math.min(10, linhas.length); i++) {
        const texto = linhas[i]?.join(' ')
        const matchAno = texto?.match(/20\d{2}/)
@@ -79,22 +117,11 @@ export function lerPlanilha(arrayBuffer) {
           const valorNum = limparValor(linha[idxValor])
           
           if (valorNum === 0) continue
+          
+          // Se não tiver categoria na planilha, tenta adivinhar
           if (!catVal) catVal = isLeftSide ? 'Receita Diversa' : 'Despesa Diversa'
 
-          let dataFormatada = ''
-          const dataVal = String(linha[idxData] || '').trim()
-          
-          if (dataVal && dataVal.includes('/')) {
-             const [d, m, a] = dataVal.split('/')
-             dataFormatada = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
-          } else if (dataVal && dataVal.includes('-')) {
-             dataFormatada = dataVal.slice(0, 10)
-          }
-
-          // Se a data for inválida ou vazia, joga pro dia 1º do mês da aba
-          if (!dataFormatada || dataFormatada.includes('Invalid')) {
-            dataFormatada = `${anoReferencia}-${String(mesReferencia).padStart(2, '0')}-01`
-          }
+          const dataFormatada = converterData(linha[idxData], mesReferencia, anoReferencia)
 
           const hash = `${dataFormatada}-${catVal}-${valorNum}`
           if (hashControle.has(hash)) continue
@@ -105,7 +132,7 @@ export function lerPlanilha(arrayBuffer) {
             descricao: catVal, 
             valor: valorNum,
             tipo: classificar(catVal, isLeftSide),
-            categoria: catVal
+            categoria: catVal // Mantém o nome que estava na planilha
           })
         }
       }
