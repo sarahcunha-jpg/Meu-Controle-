@@ -21,7 +21,6 @@ export default function Compras() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   
-  // Inicializa o form vazio (a data será definida ao abrir o modal)
   const [form, setForm] = useState({ descricao: '', valorTotal: '', numParcelas: 1, cartaoId: '', dataCompra: '' })
 
   useEffect(() => {
@@ -36,7 +35,6 @@ export default function Compras() {
     if (cartoes.length > 0 && !form.cartaoId) setForm(f => ({...f, cartaoId: cartoes[0].id}))
   }, [cartoes])
 
-  // Função para abrir o modal já com a data do mês que está sendo visualizado
   function abrirModal() {
     const hoje = new Date()
     const diaHoje = String(hoje.getDate()).padStart(2, '0')
@@ -68,7 +66,8 @@ export default function Compras() {
         numParcelas: Number(form.numParcelas),
         cartaoId: form.cartaoId,
         dataCompra: form.dataCompra,
-        diaVencimento: cartaoSelecionado?.diaVencimento || 10
+        diaVencimento: cartaoSelecionado?.diaVencimento,
+        diaFechamento: cartaoSelecionado?.diaFechamento
       })
       setOpen(false)
       setForm({ ...form, descricao: '', valorTotal: '', numParcelas: 1 })

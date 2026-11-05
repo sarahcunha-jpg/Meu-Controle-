@@ -27,24 +27,31 @@ export async function criarCompraParcelada(uid, compra) {
 
   const valorParcela = Number((compra.valorTotal / compra.numParcelas).toFixed(2))
   const dataBase = new Date(compra.dataCompra + 'T12:00:00')
-  const diaVenc = compra.diaVencimento || 10 // Dia do vencimento do cartão
+  
+  const diaVenc = Number(compra.diaVencimento) || 10 
+  const diaFechamento = Number(compra.diaFechamento) || 5
+  
+  // LÓGICA CORRIGIDA: Se comprou depois do fechamento, cai no mês seguinte. Se antes, cai no mesmo mês.
+  let mesPrimeiraParcela = dataBase.getMonth()
+  if (dataBase.getDate() > diaFechamento) {
+    mesPrimeiraParcela += 1
+  }
 
-  for (let i = 1; i <= compra.numParcelas; i++) {
+  for (let i = 0; i < compra.numParcelas; i++) {
     const parcelaRef = doc(collection(db, COL_PARCELAS))
     
-    // Lógica de vencimento: Sempre joga para o mês seguinte (ou subsequente) e aplica o dia do cartão
-    const mesVenc = dataBase.getMonth() + i 
+    // Calcula o mês correto somando as parcelas
+    const mesVenc = mesPrimeiraParcela + i
     const anoVenc = dataBase.getFullYear() + Math.floor(mesVenc / 12)
     const mesFinal = mesVenc % 12
     
-    // Evita erro em meses que não têm dia 30 ou 31 (ex: Fevereiro)
     const ultimoDiaMes = new Date(anoVenc, mesFinal + 1, 0).getDate()
     const diaFinal = Math.min(diaVenc, ultimoDiaMes)
     
     const dataFormatada = `${anoVenc}-${String(mesFinal + 1).padStart(2, '0')}-${String(diaFinal).padStart(2, '0')}`
 
     let valorFinal = valorParcela
-    if (i === compra.numParcelas) {
+    if (i === compra.numParcelas - 1) {
       const somaAnteriores = valorParcela * (compra.numParcelas - 1)
       valorFinal = Number((compra.valorTotal - somaAnteriores).toFixed(2))
     }
@@ -54,7 +61,7 @@ export async function criarCompraParcelada(uid, compra) {
       compraId: compraRef.id, 
       descricao: compra.descricao, 
       cartaoId: compra.cartaoId,
-      numero: i, 
+      numero: i + 1, 
       totalParcelas: compra.numParcelas, 
       valor: valorFinal,
       dataVencimento: dataFormatada, 
