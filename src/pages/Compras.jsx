@@ -36,7 +36,6 @@ export default function Compras() {
     if (cartoes.length > 0 && !form.cartaoId) setForm(f => ({...f, cartaoId: cartoes[0].id}))
   }, [cartoes])
 
-  // Filtra as parcelas rigorosamente pelo mês/ano selecionado no topo
   const parcelasDoMes = parcelas.filter(p => {
     if (!p.dataVencimento) return false
     const [y, m] = p.dataVencimento.split('-')
@@ -46,6 +45,10 @@ export default function Compras() {
   async function handleSubmit(e) {
     e.preventDefault()
     if (!form.cartaoId) return alert('Cadastre um cartão primeiro.')
+    
+    // Pega o cartão para saber o dia do vencimento
+    const cartaoSelecionado = cartoes.find(c => c.id === form.cartaoId)
+
     setLoading(true)
     try {
       await criarCompraParcelada(user.uid, {
@@ -53,7 +56,8 @@ export default function Compras() {
         valorTotal: Number(form.valorTotal),
         numParcelas: Number(form.numParcelas),
         cartaoId: form.cartaoId,
-        dataCompra: form.dataCompra
+        dataCompra: form.dataCompra,
+        diaVencimento: cartaoSelecionado?.diaVencimento || 10 // Passa o dia do vencimento
       })
       setOpen(false)
       setForm({ ...form, descricao: '', valorTotal: '', numParcelas: 1 })
@@ -72,7 +76,6 @@ export default function Compras() {
         <Button onClick={() => { setForm({...form, dataCompra: dataPadrao}); setOpen(true) }}>+ Nova Compra</Button>
       </div>
 
-      {/* LISTA DE PARCELAS DO MÊS */}
       <div className="bg-orange-50 rounded-xl border border-orange-100 p-4">
         <h2 className="text-lg font-bold text-orange-800 mb-3 flex items-center gap-2">
           <span>📅</span> Parcelas com vencimento em {MESES[mes]}
@@ -105,7 +108,6 @@ export default function Compras() {
                         {isPaga ? 'Desfazer' : 'Pagar'}
                       </button>
                       
-                      {/* Botão para excluir a compra inteira caso necessário */}
                       <button 
                         onClick={() => {
                           if(window.confirm('Deseja excluir esta compra e TODAS as suas parcelas?')) {
