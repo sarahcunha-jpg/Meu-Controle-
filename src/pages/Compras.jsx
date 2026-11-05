@@ -40,16 +40,37 @@ export default function Compras() {
     const diaHoje = String(hoje.getDate()).padStart(2, '0')
     const mesFormatado = String(mes + 1).padStart(2, '0')
     const novaData = `${ano}-${mesFormatado}-${diaHoje}`
-    
     setForm(prev => ({ ...prev, dataCompra: novaData }))
     setOpen(true)
   }
 
+  // Filtra as parcelas do mês (ocultando as que foram "puladas")
   const parcelasDoMes = parcelas.filter(p => {
-    if (!p.dataVencimento) return false
+    if (!p.dataVencimento || p.status === 'pulada') return false
     const [y, m] = p.dataVencimento.split('-')
     return Number(m) === (mes + 1) && Number(y) === ano
   })
+
+  // Calcula a próxima data de vencimento baseada no fechamento do cartão (para mostrar no modal)
+  function calcularPrevisaoVencimento() {
+    if (!form.dataCompra || !form.cartaoId) return ''
+    const cartao = cartoes.find(c => c.id === form.cartaoId)
+    if (!cartao) return ''
+    
+    const dataBase = new Date(form.dataCompra + 'T12:00:00')
+    const diaFechamento = Number(cartao.diaFechamento) || 5
+    const diaVenc = Number(cartao.diaVencimento) || 10
+    
+    let mesPrimeira = dataBase.getMonth()
+    if (dataBase.getDate() > diaFechamento) mesPrimeira += 1
+    
+    const anoVenc = dataBase.getFullYear() + Math.floor(mesPrimeira / 12)
+    const mesFinal = mesPrimeira % 12
+    const ultimoDia = new Date(anoVenc, mesFinal + 1, 0).getDate()
+    const diaFinal = Math.min(diaVenc, ultimoDia)
+    
+    return `A 1ª parcela vencerá em: ${String(diaFinal).padStart(2, '0')}/${String(mesFinal + 1).padStart(2, '0')}/${anoVenc}`
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -105,31 +126,39 @@ export default function Compras() {
                     <p className="text-xs text-gray-500">{cartaoNome(p.cartaoId)} • Parcela {p.numero}/{p.totalParcelas} • Vence {formatDate(p.dataVencimento)}</p>
                   </div>
                   
-                  <div className="flex items-center gap-3 justify-between sm:justify-end">
-                    <span className={`font-bold whitespace-nowrap ${isPaga ? 'text-green-600' : 'text-orange-600'}`}>
+                  <div className="flex items-center gap-2 justify-between sm:justify-end flex-wrap">
+                    <span className={`font-bold whitespace-nowrap mr-2 ${isPaga ? 'text-green-600' : 'text-orange-600'}`}>
                       {formatCurrency(p.valor)}
                     </span>
                     
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => marcarParcelaPaga(p.id, isPaga ? 'pendente' : 'paga')} 
-                        className={`text-xs px-2 py-1 rounded font-bold whitespace-nowrap ${isPaga ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-green-500 text-white hover:bg-green-600'}`}
-                      >
-                        {isPaga ? 'Desfazer' : 'Pagar'}
-                      </button>
-                      
-                      <button 
-                        onClick={() => {
-                          if(window.confirm('Deseja excluir esta compra e TODAS as suas parcelas?')) {
-                            excluirCompra(user.uid, p.compraId)
-                          }
-                        }} 
-                        className="text-xs text-red-600 hover:underline px-1"
-                        title="Excluir compra inteira"
-                      >
-                        Excluir
-                      </button>
-                    </div>
+                    <button 
+                      onClick={() => marcarParcelaPaga(p.id, isPaga ? 'pendente' : 'paga')} 
+                      className={`text-xs px-2 py-1 rounded font-bold whitespace-nowrap ${isPaga ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-green-500 text-white hover:bg-green-600'}`}
+                    >
+                      {isPaga ? 'Desfazer' : 'Pagar'}
+                    </button>
+
+                    <button 
+                      onClick={() => {
+                        if(window.confirm('Pular esta parcela? Ela não será somada no total deste mês.')) {
+                          marcarParcelaPaga(p.id, 'pulada') // Marca como pulada
+                        }
+                      }} 
+                      className="text-xs px-2 py-1 rounded font-bold bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    >
+                      Pular
+                    </button>
+                    
+                    <button 
+                      onClick={() => {
+                        if(window.confirm('Deseja excluir esta compra e TODAS as suas parcelas?')) {
+                          excluirCompra(user.uid, p.compraId)
+                        }
+                      }} 
+                      className="text-xs text-red-600 hover:underline px-1"
+                    >
+                      Excluir
+                    </button>
                   </div>
                   
                 </div>
@@ -152,6 +181,14 @@ export default function Compras() {
           </div>
           <Select label="Cartão" options={cartoes.map(c => ({ value: c.id, label: c.nome }))} value={form.cartaoId} onChange={e => setForm({...form, cartaoId: e.target.value})} />
           <Input label="Data da Compra" type="date" required value={form.dataCompra} onChange={e => setForm({...form, dataCompra: e.target.value})} />
+          
+          {/* Aviso da data prevista */}
+          {form.dataCompra && form.cartaoId && (
+             <div className="bg-blue-50 text-blue-700 p-2 rounded text-xs font-bold text-center border border-blue-100">
+                {calcularPrevisaoVencimento()}
+             </div>
+          )}
+
           <Button type="submit" disabled={loading} className="w-full">Cadastrar Compra</Button>
         </form>
       </Modal>

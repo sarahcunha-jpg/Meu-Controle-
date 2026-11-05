@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { observarRecorrentes, criarRecorrente, excluirRecorrente } from '../services/recorrentesService'
+import { useDate } from '../contexts/DateContext'
+import { observarRecorrentes, criarRecorrente, excluirRecorrente, observarPuladas, alternarPuloMes } from '../services/recorrentesService'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { Input } from '../components/ui/Input'
@@ -8,16 +9,22 @@ import { Select } from '../components/ui/Select'
 import { CATEGORIAS_DESPESA } from '../utils/categorias'
 import { formatCurrency } from '../utils/formatCurrency'
 
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
 export default function Recorrentes() {
   const { user } = useAuth()
+  const { mes, ano } = useDate()
   const [contas, setContas] = useState([])
+  const [puladas, setPuladas] = useState([])
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ nome: '', valor: '', categoria: CATEGORIAS_DESPESA[0] })
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!user) return
-    return observarRecorrentes(user.uid, setContas)
+    const u1 = observarRecorrentes(user.uid, setContas)
+    const u2 = observarPuladas(user.uid, setPuladas)
+    return () => { u1(); u2() }
   }, [user])
 
   async function handleSubmit(e) {
@@ -30,20 +37,26 @@ export default function Recorrentes() {
     } finally { setLoading(false) }
   }
 
-  const totalMensal = contas.reduce((a, c) => a + Number(c.valor), 0)
+  // Verifica se a conta foi pulada no mês atual
+  const isPulada = (contaId) => {
+    return puladas.some(p => p.recorrenteId === contaId && p.ano === ano && p.mes === (mes + 1))
+  }
+
+  // Calcula o total apenas das contas que NÃO foram puladas
+  const totalMensal = contas.filter(c => !isPulada(c.id)).reduce((a, c) => a + Number(c.valor), 0)
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Contas Recorrentes</h1>
-          <p className="text-sm text-gray-600">Seus custos fixos mensais</p>
+          <p className="text-sm text-gray-600">Custos fixos de {MESES[mes]}</p>
         </div>
         <Button onClick={() => setOpen(true)}>+ Nova Conta</Button>
       </div>
 
       <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-yellow-800 text-sm">
-        O total das suas contas fixas é <strong>{formatCurrency(totalMensal)}</strong> por mês.
+        O total das suas contas fixas em {MESES[mes]} é <strong>{formatCurrency(totalMensal)}</strong>.
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -51,16 +64,28 @@ export default function Recorrentes() {
           <p className="p-6 text-sm text-gray-500 text-center">Nenhuma conta recorrente cadastrada.</p>
         ) : (
           <div className="divide-y divide-gray-100">
-            {contas.map(c => (
-              <div key={c.id} className="p-3 flex items-center gap-3">
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">{c.nome}</p>
-                  <p className="text-xs text-gray-500">{c.categoria}</p>
+            {contas.map(c => {
+              const pulada = isPulada(c.id)
+              return (
+                <div key={c.id} className={`p-3 flex items-center gap-3 ${pulada ? 'bg-gray-50 opacity-60' : ''}`}>
+                  <div className="flex-1">
+                    <p className={`font-medium ${pulada ? 'text-gray-500 line-through' : 'text-gray-900'}`}>{c.nome}</p>
+                    <p className="text-xs text-gray-500">{c.categoria}</p>
+                  </div>
+                  <span className={`font-semibold ${pulada ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{formatCurrency(c.valor)}/mês</span>
+                  
+                  <div className="flex gap-2 ml-2">
+                    <button 
+                      onClick={() => alternarPuloMes(user.uid, c.id, ano, mes + 1, pulada)}
+                      className={`text-xs px-2 py-1 rounded font-bold ${pulada ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                    >
+                      {pulada ? 'Desfazer Pulo' : 'Não pagarei'}
+                    </button>
+                    <button onClick={() => excluirRecorrente(c.id)} className="text-xs text-red-600 hover:underline">Excluir</button>
+                  </div>
                 </div>
-                <span className="font-semibold text-gray-800">{formatCurrency(c.valor)}/mês</span>
-                <button onClick={() => excluirRecorrente(c.id)} className="text-xs text-red-600 hover:underline ml-2">Excluir</button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
