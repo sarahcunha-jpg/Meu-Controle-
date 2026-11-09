@@ -37,7 +37,6 @@ export default function Recorrentes() {
     } finally { setLoading(false) }
   }
 
-  // CORRIGIDO: Forçando a comparação com Number()
   const isPulada = (contaId) => {
     return puladas.some(p => 
       p.recorrenteId === contaId && 

@@ -18,11 +18,19 @@ export function observarPuladas(uid, callback) {
   })
 }
 
-export function criarRecorrente(uid, dados) { return addDoc(collection(db, COL), { ...dados, uid, criadoEm: serverTimestamp() }) }
-export function atualizarRecorrente(id, dados) { return updateDoc(doc(db, COL, id), dados) }
-export function excluirRecorrente(id) { return deleteDoc(doc(db, COL, id)) }
+export function criarRecorrente(uid, dados) { 
+  return addDoc(collection(db, COL), { ...dados, uid, criadoEm: serverTimestamp() }) 
+}
 
-// CORRIGIDO: Convertendo para número e tratando erros
+export function atualizarRecorrente(id, dados) { 
+  return updateDoc(doc(db, COL, id), dados) 
+}
+
+export function excluirRecorrente(id) { 
+  return deleteDoc(doc(db, COL, id)) 
+}
+
+// CORRIGIDO E COMPLETO
 export async function alternarPuloMes(uid, recorrenteId, ano, mes, isPulada) {
   const docId = `${uid}_${recorrenteId}_${Number(ano)}_${Number(mes)}`
   const docRef = doc(db, COL_PULADAS, docId)
@@ -30,7 +38,6 @@ export async function alternarPuloMes(uid, recorrenteId, ano, mes, isPulada) {
   try {
     if (isPulada) {
       await deleteDoc(docRef)
-      console.log("Pulo desfeito com sucesso")
     } else {
       await setDoc(docRef, {
         uid, 
@@ -38,10 +45,9 @@ export async function alternarPuloMes(uid, recorrenteId, ano, mes, isPulada) {
         ano: Number(ano), 
         mes: Number(mes)
       })
-      console.log("Pulo registrado com sucesso")
     }
   } catch (error) {
-    console.error("Erro no Firestore:", error)
-    alert("Erro ao alterar status da conta. Tente novamente.")
+    console.error("ERRO NO FIRESTORE:", error)
+    alert(`Erro: ${error.code || error.message}`)
   }
 }
