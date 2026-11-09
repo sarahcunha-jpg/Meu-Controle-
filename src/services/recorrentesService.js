@@ -30,24 +30,26 @@ export function excluirRecorrente(id) {
   return deleteDoc(doc(db, COL, id)) 
 }
 
-// CORRIGIDO E COMPLETO
+// Função corrigida para pular/desfazer o pulo
 export async function alternarPuloMes(uid, recorrenteId, ano, mes, isPulada) {
   const docId = `${uid}_${recorrenteId}_${Number(ano)}_${Number(mes)}`
   const docRef = doc(db, COL_PULADAS, docId)
   
   try {
     if (isPulada) {
+      // Para deletar, o Firestore exige que a regra verifique resource.data.uid
       await deleteDoc(docRef)
     } else {
+      // Para criar, o documento precisa conter o campo 'uid'
       await setDoc(docRef, {
-        uid, 
-        recorrenteId, 
+        uid: uid, 
+        recorrenteId: recorrenteId, 
         ano: Number(ano), 
         mes: Number(mes)
       })
     }
   } catch (error) {
     console.error("ERRO NO FIRESTORE:", error)
-    alert(`Erro: ${error.code || error.message}`)
+    alert(`Erro ao alterar status: ${error.code || error.message}`)
   }
 }
