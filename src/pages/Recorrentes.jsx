@@ -37,12 +37,15 @@ export default function Recorrentes() {
     } finally { setLoading(false) }
   }
 
-  // Verifica se a conta foi pulada no mês atual
+  // CORRIGIDO: Forçando a comparação com Number()
   const isPulada = (contaId) => {
-    return puladas.some(p => p.recorrenteId === contaId && p.ano === ano && p.mes === (mes + 1))
+    return puladas.some(p => 
+      p.recorrenteId === contaId && 
+      Number(p.ano) === Number(ano) && 
+      Number(p.mes) === Number(mes + 1)
+    )
   }
 
-  // Calcula o total apenas das contas que NÃO foram puladas
   const totalMensal = contas.filter(c => !isPulada(c.id)).reduce((a, c) => a + Number(c.valor), 0)
 
   return (
