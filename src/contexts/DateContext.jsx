@@ -1,13 +1,25 @@
-import { createContext, useState, useContext } from 'react'
+import { createContext, useState, useContext, useEffect } from 'react'
 
 export const DateContext = createContext(null)
 
 export function DateProvider({ children }) {
-  const hoje = new Date()
-  const [mes, setMes] = useState(hoje.getMonth())
-  const [ano, setAno] = useState(hoje.getFullYear())
+  // Inicializa pegando do localStorage, ou usa o mês atual se não tiver nada salvo
+  const [mes, setMes] = useState(() => {
+    const salvo = localStorage.getItem('@meucontrole:mes')
+    return salvo ? Number(salvo) : new Date().getMonth()
+  })
+  
+  const [ano, setAno] = useState(() => {
+    const salvo = localStorage.getItem('@meucontrole:ano')
+    return salvo ? Number(salvo) : new Date().getFullYear()
+  })
 
-  // Retorna um objeto Date para o primeiro dia do mês selecionado
+  // Sempre que mudar, salva no localStorage
+  useEffect(() => {
+    localStorage.setItem('@meucontrole:mes', mes)
+    localStorage.setItem('@meucontrole:ano', ano)
+  }, [mes, ano])
+
   const dataReferencia = new Date(ano, mes, 1)
 
   return (

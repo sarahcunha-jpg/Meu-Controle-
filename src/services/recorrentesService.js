@@ -1,4 +1,4 @@
-import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
 import { db } from '../firebase/config'
 
 const COL = 'contas_recorrentes'
@@ -22,7 +22,7 @@ export function criarRecorrente(uid, dados) { return addDoc(collection(db, COL),
 export function atualizarRecorrente(id, dados) { return updateDoc(doc(db, COL, id), dados) }
 export function excluirRecorrente(id) { return deleteDoc(doc(db, COL, id)) }
 
-// Função para pular ou despular um mês
+// CORRIGIDO: Usando setDoc para garantir o ID fixo
 export function alternarPuloMes(uid, recorrenteId, ano, mes, isPulada) {
   const docId = `${uid}_${recorrenteId}_${ano}_${mes}`
   const docRef = doc(db, COL_PULADAS, docId)
@@ -30,8 +30,8 @@ export function alternarPuloMes(uid, recorrenteId, ano, mes, isPulada) {
   if (isPulada) {
     return deleteDoc(docRef)
   } else {
-    return addDoc(collection(db, COL_PULADAS), {
-      uid, recorrenteId, ano, mes, docId
-    }).then(() => updateDoc(docRef, { docId }))
+    return setDoc(docRef, {
+      uid, recorrenteId, ano, mes
+    })
   }
 }
