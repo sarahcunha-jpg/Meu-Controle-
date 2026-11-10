@@ -44,32 +44,43 @@ export default function Compras() {
     setOpen(true)
   }
 
-  // Filtra as parcelas do mês (ocultando as que foram "puladas")
   const parcelasDoMes = parcelas.filter(p => {
     if (!p.dataVencimento || p.status === 'pulada') return false
     const [y, m] = p.dataVencimento.split('-')
     return Number(m) === (mes + 1) && Number(y) === ano
   })
 
-  // Calcula a próxima data de vencimento baseada no fechamento do cartão (para mostrar no modal)
+  // LÓGICA CORRIGIDA DA PREVISÃO (Igual à do Banco de Dados)
   function calcularPrevisaoVencimento() {
     if (!form.dataCompra || !form.cartaoId) return ''
     const cartao = cartoes.find(c => c.id === form.cartaoId)
     if (!cartao) return ''
     
     const dataBase = new Date(form.dataCompra + 'T12:00:00')
+    const diaCompra = dataBase.getDate()
     const diaFechamento = Number(cartao.diaFechamento) || 5
     const diaVenc = Number(cartao.diaVencimento) || 10
     
-    let mesPrimeira = dataBase.getMonth()
-    if (dataBase.getDate() > diaFechamento) mesPrimeira += 1
-    
-    const anoVenc = dataBase.getFullYear() + Math.floor(mesPrimeira / 12)
-    const mesFinal = mesPrimeira % 12
-    const ultimoDia = new Date(anoVenc, mesFinal + 1, 0).getDate()
+    let mesBase = dataBase.getMonth()
+    let anoBase = dataBase.getFullYear()
+
+    if (diaCompra > diaFechamento) {
+      mesBase += 1
+      if (mesBase > 11) { mesBase = 0; anoBase += 1 }
+    }
+
+    let mesVenc = mesBase
+    let anoVenc = anoBase
+
+    if (diaVenc < diaFechamento) {
+      mesVenc += 1
+      if (mesVenc > 11) { mesVenc = 0; anoVenc += 1 }
+    }
+
+    const ultimoDia = new Date(anoVenc, mesVenc + 1, 0).getDate()
     const diaFinal = Math.min(diaVenc, ultimoDia)
     
-    return `A 1ª parcela vencerá em: ${String(diaFinal).padStart(2, '0')}/${String(mesFinal + 1).padStart(2, '0')}/${anoVenc}`
+    return `A 1ª parcela vencerá em: ${String(diaFinal).padStart(2, '0')}/${String(mesVenc + 1).padStart(2, '0')}/${anoVenc}`
   }
 
   async function handleSubmit(e) {
@@ -141,7 +152,7 @@ export default function Compras() {
                     <button 
                       onClick={() => {
                         if(window.confirm('Pular esta parcela? Ela não será somada no total deste mês.')) {
-                          marcarParcelaPaga(p.id, 'pulada') // Marca como pulada
+                          marcarParcelaPaga(p.id, 'pulada')
                         }
                       }} 
                       className="text-xs px-2 py-1 rounded font-bold bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -182,7 +193,6 @@ export default function Compras() {
           <Select label="Cartão" options={cartoes.map(c => ({ value: c.id, label: c.nome }))} value={form.cartaoId} onChange={e => setForm({...form, cartaoId: e.target.value})} />
           <Input label="Data da Compra" type="date" required value={form.dataCompra} onChange={e => setForm({...form, dataCompra: e.target.value})} />
           
-          {/* Aviso da data prevista */}
           {form.dataCompra && form.cartaoId && (
              <div className="bg-blue-50 text-blue-700 p-2 rounded text-xs font-bold text-center border border-blue-100">
                 {calcularPrevisaoVencimento()}
