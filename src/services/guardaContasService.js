@@ -13,12 +13,14 @@ export function observarContasGuardadas(uid, callback) {
 }
 
 export function criarContaCofrinho(uid, dados) {
-  return addDoc(collection(db, COL), { 
+  const payload = { 
     ...dados, 
-    uid: uid, // <-- ISSO É O QUE O FIREBASE PRECISA PARA NÃO DAR ERRO
+    uid: uid,
     valorGuardado: 0,
     criadoEm: serverTimestamp() 
-  })
+  }
+  console.log("Enviando para o Firebase:", payload) // <-- LOG DE TESTE
+  return addDoc(collection(db, COL), payload)
 }
 
 export function alterarValorCofrinho(id, valor) {
