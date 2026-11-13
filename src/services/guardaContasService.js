@@ -15,16 +15,15 @@ export function observarContasGuardadas(uid, callback) {
 export function criarContaCofrinho(uid, dados) {
   return addDoc(collection(db, COL), { 
     ...dados, 
-    uid, 
-    valorGuardado: 0, // Começa zerado
+    valorGuardado: 0,
     criadoEm: serverTimestamp() 
   })
 }
 
-export function depositarNaConta(id, valorParaSomar) {
-  // Soma o valor ao que já estava guardado
+// Depositar ou Retirar. Aceita valores negativos para retirada.
+export function alterarValorCofrinho(id, valor) {
   return updateDoc(doc(db, COL, id), {
-    valorGuardado: increment(Number(valorParaSomar))
+    valorGuardado: increment(Number(valor))
   })
 }
 
