@@ -4,8 +4,8 @@ import { useDate } from '../contexts/DateContext'
 import { observarContasGuardadas, criarContaCofrinho, alterarValorCofrinho, excluirContaCofrinho } from '../services/guardaContasService'
 import { observarDespesas } from '../services/despesasService'
 import { observarRecorrentes } from '../services/recorrentesService'
-import { observarParcelas } from '../services/comprasService' // NOVO IMPORT
-import { observarCartoes } from '../services/cartoesService' // NOVO IMPORT
+import { observarParcelas } from '../services/comprasService'
+import { observarCartoes } from '../services/cartoesService'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { Input } from '../components/ui/Input'
@@ -25,11 +25,9 @@ export default function Cofrinho() {
   const [parcelas, setParcelas] = useState([])
   const [cartoes, setCartoes] = useState([])
   
-  // Modais
   const [openNovo, setOpenNovo] = useState(false)
   const [openMov, setOpenMov] = useState(false)
   
-  // Formulários
   const [tipoNovaConta, setTipoNovaConta] = useState('recorrente')
   const [contaSelecionadaId, setContaSelecionadaId] = useState('')
   const [valorMov, setValorMov] = useState('')
@@ -48,36 +46,54 @@ export default function Cofrinho() {
     return () => { u1(); u2(); u3(); u4(); u5() }
   }, [user])
 
+  // Reseta o select quando abre o modal
+  function abrirNovoModal() {
+    setContaSelecionadaId('')
+    setTipoNovaConta('recorrente')
+    setOpenNovo(true)
+  }
+
   const despesasMes = filtrarMes(despesas, dataReferencia)
   
-  // Filtra as parcelas que vencem neste mês e não foram pagas/puladas
+  // Filtra parcelas pendentes
   const parcelasMes = filtrarMes(parcelas, dataReferencia, 'dataVencimento').filter(p => p.status === 'pendente')
   
   const contasDoMes = contas.filter(c => Number(c.mes) === (mes + 1) && Number(c.ano) === ano)
 
   const getCartaoNome = (id) => cartoes.find(c => c.id === id)?.nome || 'Cartão'
 
-  // Opções para os selects
-  const opcoesRecorrentes = recorrentes.map(r => ({ value: `rec_${r.id}`, label: `${r.nome} (${formatCurrency(r.valor)})`, valor: r.valor, nome: r.nome }))
-  const opcoesDespesas = despesasMes.map(d => ({ value: `des_${d.id}`, label: `${d.descricao} (${formatCurrency(d.valor)})`, valor: d.valor, nome: d.descricao }))
-  const opcoesParcelas = parcelasMes.map(p => ({ 
-    value: `par_${p.id}`, 
-    label: `${getCartaoNome(p.cartaoId)} - ${p.descricao} (${p.numero}/${p.totalParcelas}) - ${formatCurrency(p.valor)}`, 
-    valor: p.valor, 
-    nome: `${getCartaoNome(p.cartaoId)} - ${p.descricao} (${p.numero}/${p.totalParcelas})` 
-  }))
+  // OPÇÕES: Filtra para não mostrar o que já está no cofrinho
+  const opcoesRecorrentes = recorrentes
+    .filter(r => !contasDoMes.some(c => c.origemId === r.id))
+    .map(r => ({ value: `rec_${r.id}`, label: `${r.nome} (${formatCurrency(r.valor)})`, valor: r.valor, nome: r.nome, id: r.id }))
+    
+  const opcoesDespesas = despesasMes
+    .filter(d => !contasDoMes.some(c => c.origemId === d.id))
+    .map(d => ({ value: `des_${d.id}`, label: `${d.descricao} (${formatCurrency(d.valor)})`, valor: d.valor, nome: d.descricao, id: d.id }))
+    
+  const opcoesParcelas = parcelasMes
+    .filter(p => !contasDoMes.some(c => c.origemId === p.id))
+    .map(p => ({ 
+      value: `par_${p.id}`, 
+      label: `${getCartaoNome(p.cartaoId)} - ${p.descricao} (${p.numero}/${p.totalParcelas}) - ${formatCurrency(p.valor)}`, 
+      valor: p.valor, 
+      nome: `${getCartaoNome(p.cartaoId)} - ${p.descricao} (${p.numero}/${p.totalParcelas})`,
+      id: p.id
+    }))
 
   let opcoesAtuais = []
   if (tipoNovaConta === 'recorrente') opcoesAtuais = opcoesRecorrentes
   else if (tipoNovaConta === 'despesa') opcoesAtuais = opcoesDespesas
   else if (tipoNovaConta === 'parcela') opcoesAtuais = opcoesParcelas
 
-  // Se estiver vazio, coloca uma opção falsa para o select não quebrar
-  const opcoesSelect = opcoesAtuais.length > 0 ? opcoesAtuais : [{ value: '', label: 'Nenhuma conta encontrada neste mês' }]
+  // Adiciona a opção padrão
+  const opcoesSelect = opcoesAtuais.length > 0 
+    ? [{ value: '', label: 'Selecione uma conta pendente...' }, ...opcoesAtuais] 
+    : [{ value: '', label: 'Nenhuma conta pendente encontrada' }]
 
   async function handleCriarConta(e) {
     e.preventDefault()
-    if (!contaSelecionadaId) return alert('Selecione uma conta válida.')
+    if (!contaSelecionadaId) return alert('Por favor, selecione uma conta na lista.')
     
     const escolhida = opcoesAtuais.find(o => o.value === contaSelecionadaId)
     if (!escolhida) return
@@ -87,11 +103,11 @@ export default function Cofrinho() {
       await criarContaCofrinho(user.uid, {
         nome: escolhida.nome,
         valorTotal: escolhida.valor,
+        origemId: escolhida.id, // Salva o ID para não aparecer de novo
         mes: mes + 1,
         ano: ano
       })
       setOpenNovo(false)
-      setContaSelecionadaId('')
     } catch (err) { alert(err.message) } finally { setLoading(false) }
   }
 
@@ -134,7 +150,7 @@ export default function Cofrinho() {
           <h1 className="text-2xl font-bold text-gray-900">Cofrinho de Contas</h1>
           <p className="text-sm text-gray-600">Separe o dinheiro para pagar suas contas de {MESES[mes]}</p>
         </div>
-        <Button onClick={() => setOpenNovo(true)}>+ Adicionar ao Cofrinho</Button>
+        <Button onClick={abrirNovoModal}>+ Adicionar ao Cofrinho</Button>
       </div>
 
       <div className="grid grid-cols-3 gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
@@ -210,7 +226,6 @@ export default function Cofrinho() {
         )}
       </div>
 
-      {/* MODAL NOVO */}
       <Modal open={openNovo} onClose={() => setOpenNovo(false)} title="Adicionar Conta ao Cofrinho">
         <form onSubmit={handleCriarConta} className="space-y-3">
           <Select 
@@ -218,7 +233,7 @@ export default function Cofrinho() {
             options={[
               {value: 'recorrente', label: 'Conta Recorrente'},
               {value: 'despesa', label: 'Despesa do Mês'},
-              {value: 'parcela', label: 'Fatura de Cartão (Parcela)'} // <-- NOVA OPÇÃO
+              {value: 'parcela', label: 'Fatura de Cartão (Parcela)'}
             ]} 
             value={tipoNovaConta} 
             onChange={e => { setTipoNovaConta(e.target.value); setContaSelecionadaId('') }} 
@@ -238,7 +253,6 @@ export default function Cofrinho() {
         </form>
       </Modal>
 
-      {/* MODAL MOVIMENTAÇÃO */}
       <Modal 
         open={openMov} 
         onClose={() => setOpenMov(false)} 
