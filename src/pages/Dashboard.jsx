@@ -8,6 +8,7 @@ import { observarReceitas } from '../services/receitasService'
 import { observarDespesas } from '../services/despesasService'
 import { observarParcelas } from '../services/comprasService'
 import { observarRecorrentes, observarPuladas } from '../services/recorrentesService'
+import { observarContasGuardadas } from '../services/guardaContasService'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 
 const CORES = ['#0ea5e9', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#64748b']
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const [parcelas, setParcelas] = useState([])
   const [recorrentes, setRecorrentes] = useState([])
   const [puladas, setPuladas] = useState([])
+  const [cofrinho, setCofrinho] = useState([])
 
   useEffect(() => {
     if (!user) return
@@ -29,26 +31,29 @@ export default function Dashboard() {
     const u3 = observarParcelas(user.uid, setParcelas)
     const u4 = observarRecorrentes(user.uid, setRecorrentes)
     const u5 = observarPuladas(user.uid, setPuladas)
-    return () => { u1(); u2(); u3(); u4(); u5() }
+    const u6 = observarContasGuardadas(user.uid, setCofrinho)
+    return () => { u1(); u2(); u3(); u4(); u5(); u6() }
   }, [user])
 
-  // Cálculos básicos
   const resumo = resumoDashboard(receitas, despesas, dataReferencia)
   const despesasMes = filtrarMes(despesas, dataReferencia)
   const porCategoria = gastosPorCategoria(despesasMes)
   
-  // Parcelas que vencem no mês (ignorando as puladas)
   const parcelasMes = filtrarMes(parcelas, dataReferencia, 'dataVencimento').filter(p => p.status !== 'pulada')
   const totalParcelasMes = parcelasMes.reduce((a, p) => a + Number(p.valor), 0)
 
-  // Contas Recorrentes (ignorando as puladas)
   const totalRecorrentes = recorrentes
     .filter(r => !puladas.some(p => p.recorrenteId === r.id && Number(p.ano) === Number(ano) && Number(p.mes) === Number(mes + 1)))
     .reduce((a, r) => a + Number(r.valor), 0)
 
-  // O VERDADEIRO SALDO: Receitas - (Despesas avulsas + Parcelas + Contas Recorrentes)
   const totalDespesasConsolidadas = resumo.despesasMes + totalParcelasMes + totalRecorrentes
   const saldoReal = resumo.receitasMes - totalDespesasConsolidadas
+
+  // Cálculos do Cofrinho
+  const cofrinhoMes = cofrinho.filter(c => Number(c.mes) === (mes + 1) && Number(c.ano) === ano)
+  const totalCofrinho = cofrinhoMes.reduce((a, c) => a + Number(c.valorTotal), 0)
+  const totalGuardado = cofrinhoMes.reduce((a, c) => a + Number(c.valorGuardado), 0)
+  const faltaGuardar = totalCofrinho - totalGuardado
 
   return (
     <div className="space-y-4">
@@ -61,7 +66,7 @@ export default function Dashboard() {
         <Card title="Receitas do Mês" value={formatCurrency(resumo.receitasMes)} color="success" />
         <Card title="Despesas Totais" value={formatCurrency(totalDespesasConsolidadas)} color="danger" subtitle="Avulsas + Parcelas + Fixas" />
         <Card title="Saldo do Mês" value={formatCurrency(saldoReal)} color={saldoReal >= 0 ? 'success' : 'danger'} />
-        <Card title="Parcelas deste Mês" value={formatCurrency(totalParcelasMes)} color="warning" subtitle={`${parcelasMes.length} parcelas`} />
+        <Card title="Falta Guardar" value={formatCurrency(faltaGuardar)} color={faltaGuardar > 0 ? 'warning' : 'success'} subtitle={`Guardado: ${formatCurrency(totalGuardado)}`} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -91,19 +96,23 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <h3 className="font-semibold text-gray-900 mb-2">Receitas x Despesas Totais</h3>
-          <div className="h-56">
-            <ResponsiveContainer>
-              <BarChart data={[
-                { nome: 'Receitas', valor: resumo.receitasMes },
-                { nome: 'Despesas', valor: totalDespesasConsolidadas }
-              ]}>
-                <XAxis dataKey="nome" />
-                <YAxis />
-                <Tooltip formatter={(v) => formatCurrency(v)} />
-                <Bar dataKey="valor" fill="#0ea5e9" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <h3 className="font-semibold text-gray-900 mb-2">Cofrinho de Contas</h3>
+          
+          <div className="mt-3">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-gray-600">Total Guardado</span>
+              <span className="font-bold text-green-600">{formatCurrency(totalGuardado)}</span>
+            </div>
+            <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
+              <div className="h-full bg-green-500" style={{ width: `${totalCofrinho > 0 ? (totalGuardado / totalCofrinho) * 100 : 0}%` }}></div>
+            </div>
+            <div className="flex justify-between text-sm mt-3 mb-1">
+              <span className="text-gray-600">Falta Guardar</span>
+              <span className="font-bold text-red-500">{formatCurrency(faltaGuardar)}</span>
+            </div>
+            <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
+              <div className="h-full bg-red-500" style={{ width: `${totalCofrinho > 0 ? (faltaGuardar / totalCofrinho) * 100 : 0}%` }}></div>
+            </div>
           </div>
         </div>
       </div>

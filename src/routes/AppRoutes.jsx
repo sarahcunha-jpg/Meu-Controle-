@@ -9,10 +9,11 @@ import Despesas from '../pages/Despesas'
 import Cartoes from '../pages/Cartoes'
 import Compras from '../pages/Compras'
 import Recorrentes from '../pages/Recorrentes'
+import Cofrinho from '../pages/Cofrinho' // <-- IMPORTANDO O COFRINHO
 import Orcamentos from '../pages/Orcamentos'
 import Metas from '../pages/Metas'
 import Relatorios from '../pages/Relatorios'
-import Importar from '../pages/Importar' // <-- IMPORTADO AQUI
+import Importar from '../pages/Importar'
 import Configuracoes from '../pages/Configuracoes'
 import Login from '../pages/auth/Login'
 import Cadastro from '../pages/auth/Cadastro'
@@ -33,6 +34,7 @@ export function AppRoutes() {
       <Route path="/cartoes" element={<PrivateRoute><AppLayout><Cartoes /></AppLayout></PrivateRoute>} />
       <Route path="/compras" element={<PrivateRoute><AppLayout><Compras /></AppLayout></PrivateRoute>} />
       <Route path="/recorrentes" element={<PrivateRoute><AppLayout><Recorrentes /></AppLayout></PrivateRoute>} />
+      <Route path="/cofrinho" element={<PrivateRoute><AppLayout><Cofrinho /></AppLayout></PrivateRoute>} /> {/* <-- ROTA ADICIONADA */}
       <Route path="/orcamentos" element={<PrivateRoute><AppLayout><Orcamentos /></AppLayout></PrivateRoute>} />
       <Route path="/metas" element={<PrivateRoute><AppLayout><Metas /></AppLayout></PrivateRoute>} />
       <Route path="/relatorios" element={<PrivateRoute><AppLayout><Relatorios /></AppLayout></PrivateRoute>} />

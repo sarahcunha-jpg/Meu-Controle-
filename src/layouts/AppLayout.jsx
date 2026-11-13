@@ -13,10 +13,11 @@ const links = [
   { to: '/cartoes', label: 'Cartões' },
   { to: '/compras', label: 'Compras e Parcelas' },
   { to: '/recorrentes', label: 'Contas Recorrentes' },
+  { to: '/cofrinho', label: 'Cofrinho de Contas' }, // <-- NOVO LINK
   { to: '/orcamentos', label: 'Orçamentos' },
   { to: '/metas', label: 'Metas' },
   { to: '/relatorios', label: 'Relatórios' },
-  { to: '/importar', label: 'Importar Extrato' }, // <-- ADICIONADO
+  { to: '/importar', label: 'Importar Extrato' },
   { to: '/configuracoes', label: 'Configurações' }
 ]
 
