@@ -41,12 +41,12 @@ export default function Dashboard() {
   const despesasMes = filtrarMes(despesas, dataReferencia)
   const porCategoria = gastosPorCategoria(despesasMes)
   
-  // Parcelas
+  // === CÁLCULOS DE PARCELAS ===
   const parcelasMes = filtrarMes(parcelas, dataReferencia, 'dataVencimento')
   const parcelasPagas = parcelasMes.filter(p => p.status === 'paga').reduce((a, p) => a + Number(p.valor), 0)
   const parcelasPendentes = parcelasMes.filter(p => p.status === 'pendente').reduce((a, p) => a + Number(p.valor), 0)
 
-  // Recorrentes
+  // === CÁLCULOS DE RECORRENTES ===
   const getStatusRec = (id) => {
     const s = statusRec.find(r => r.recorrenteId === id && Number(r.ano) === Number(ano) && Number(r.mes) === Number(mes + 1))
     return s ? s.status : 'pendente'
@@ -54,12 +54,12 @@ export default function Dashboard() {
   const recPagas = recorrentes.filter(r => getStatusRec(r.id) === 'paga').reduce((a, r) => a + Number(r.valor), 0)
   const recPendentes = recorrentes.filter(r => getStatusRec(r.id) === 'pendente').reduce((a, r) => a + Number(r.valor), 0)
 
-  // Consolidação do Mês
+  // === CONSOLIDAÇÃO ===
   const totalDespesasConsolidadas = resumo.despesasMes + parcelasPagas + parcelasPendentes + recPagas + recPendentes
   const saldoReal = resumo.receitasMes - totalDespesasConsolidadas
 
-  const totalPago = parcelasPagas + recPagas
-  const totalFaltaPagar = parcelasPendentes + recPendentes
+  const totalPagoGeral = parcelasPagas + recPagas
+  const totalFaltaPagarGeral = parcelasPendentes + recPendentes
 
   // Cofrinho
   const cofrinhoMes = cofrinho.filter(c => Number(c.mes) === (mes + 1) && Number(c.ano) === ano)
@@ -81,35 +81,57 @@ export default function Dashboard() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
-        {/* Balanço de Contas */}
+        
+        {/* BALANÇO DE CONTAS DETALHADO */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 col-span-1 md:col-span-1">
-          <h3 className="font-bold text-gray-800 mb-4 text-lg">Balanço de Contas</h3>
+          <div className="flex justify-between items-end mb-4">
+            <h3 className="font-bold text-gray-800 text-lg">Balanço de Contas</h3>
+            <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              Total: {formatCurrency(totalPagoGeral + totalFaltaPagarGeral)}
+            </span>
+          </div>
           
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500 text-sm font-medium">Já Paguei</span>
-              <span className="font-bold text-green-600">{formatCurrency(totalPago)}</span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500 text-sm font-medium">Ainda Falta Pagar</span>
-              <span className="font-bold text-red-500">{formatCurrency(totalFaltaPagar)}</span>
+          <div className="space-y-5">
+            {/* BLOCO 1: CONTAS RECORRENTES */}
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-bold text-gray-700 flex items-center gap-1">📅 Contas Fixas</span>
+                <span className="text-xs font-bold text-gray-500">{((recPagas / (recPagas + recPendentes || 1)) * 100).toFixed(0)}% Pago</span>
+              </div>
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-green-600 font-semibold">Pago: {formatCurrency(recPagas)}</span>
+                <span className="text-red-500 font-semibold">Falta: {formatCurrency(recPendentes)}</span>
+              </div>
+              <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                <div className="h-full bg-green-500" style={{ width: `${(recPagas / (recPagas + recPendentes || 1)) * 100}%` }}></div>
+              </div>
             </div>
 
-            <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden mt-2">
-              <div className="h-full bg-green-500" style={{ width: `${(totalPago / (totalPago + totalFaltaPagar || 1)) * 100}%` }}></div>
+            {/* BLOCO 2: PARCELAS */}
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-bold text-gray-700 flex items-center gap-1">💳 Faturas/Parcelas</span>
+                <span className="text-xs font-bold text-gray-500">{((parcelasPagas / (parcelasPagas + parcelasPendentes || 1)) * 100).toFixed(0)}% Pago</span>
+              </div>
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-green-600 font-semibold">Pago: {formatCurrency(parcelasPagas)}</span>
+                <span className="text-orange-500 font-semibold">Falta: {formatCurrency(parcelasPendentes)}</span>
+              </div>
+              <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                <div className="h-full bg-orange-500" style={{ width: `${(parcelasPagas / (parcelasPagas + parcelasPendentes || 1)) * 100}%` }}></div>
+              </div>
             </div>
+          </div>
 
-            <div className="bg-blue-50 p-3 rounded-xl mt-4 text-xs text-blue-800 font-medium">
-              Se você tem <strong>{formatCurrency(resumo.receitasMes)}</strong> em conta, após pagar tudo, sobrará <strong>{formatCurrency(saldoReal)}</strong>.
-            </div>
+          <div className="bg-blue-50 p-3 rounded-xl mt-5 text-xs text-blue-800 font-medium text-center">
+            Após pagar todas as contas do mês, seu saldo final será de <strong className={saldoReal >= 0 ? 'text-blue-700' : 'text-red-600'}>{formatCurrency(saldoReal)}</strong>.
           </div>
         </div>
 
         {/* Gráfico Receitas x Despesas */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 col-span-2">
           <h3 className="font-bold text-gray-800 mb-2 text-lg">Receitas x Despesas</h3>
-          <div className="h-52">
+          <div className="h-56">
             <ResponsiveContainer>
               <BarChart data={[
                 { nome: 'Receitas', valor: resumo.receitasMes },
