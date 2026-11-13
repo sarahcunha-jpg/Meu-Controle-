@@ -4,6 +4,8 @@ import { useDate } from '../contexts/DateContext'
 import { observarContasGuardadas, criarContaCofrinho, alterarValorCofrinho, excluirContaCofrinho } from '../services/guardaContasService'
 import { observarDespesas } from '../services/despesasService'
 import { observarRecorrentes } from '../services/recorrentesService'
+import { observarParcelas } from '../services/comprasService' // NOVO IMPORT
+import { observarCartoes } from '../services/cartoesService' // NOVO IMPORT
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { Input } from '../components/ui/Input'
@@ -20,6 +22,8 @@ export default function Cofrinho() {
   const [contas, setContas] = useState([])
   const [despesas, setDespesas] = useState([])
   const [recorrentes, setRecorrentes] = useState([])
+  const [parcelas, setParcelas] = useState([])
+  const [cartoes, setCartoes] = useState([])
   
   // Modais
   const [openNovo, setOpenNovo] = useState(false)
@@ -29,7 +33,7 @@ export default function Cofrinho() {
   const [tipoNovaConta, setTipoNovaConta] = useState('recorrente')
   const [contaSelecionadaId, setContaSelecionadaId] = useState('')
   const [valorMov, setValorMov] = useState('')
-  const [acaoMov, setAcaoMov] = useState('depositar') // 'depositar' ou 'retirar'
+  const [acaoMov, setAcaoMov] = useState('depositar')
   const [contaMov, setContaMov] = useState(null)
   
   const [loading, setLoading] = useState(false)
@@ -39,23 +43,43 @@ export default function Cofrinho() {
     const u1 = observarContasGuardadas(user.uid, setContas)
     const u2 = observarDespesas(user.uid, setDespesas)
     const u3 = observarRecorrentes(user.uid, setRecorrentes)
-    return () => { u1(); u2(); u3() }
+    const u4 = observarParcelas(user.uid, setParcelas)
+    const u5 = observarCartoes(user.uid, setCartoes)
+    return () => { u1(); u2(); u3(); u4(); u5() }
   }, [user])
 
   const despesasMes = filtrarMes(despesas, dataReferencia)
+  
+  // Filtra as parcelas que vencem neste mês e não foram pagas/puladas
+  const parcelasMes = filtrarMes(parcelas, dataReferencia, 'dataVencimento').filter(p => p.status === 'pendente')
+  
   const contasDoMes = contas.filter(c => Number(c.mes) === (mes + 1) && Number(c.ano) === ano)
 
-  // Opções que vão aparecer no select do Modal Novo
+  const getCartaoNome = (id) => cartoes.find(c => c.id === id)?.nome || 'Cartão'
+
+  // Opções para os selects
   const opcoesRecorrentes = recorrentes.map(r => ({ value: `rec_${r.id}`, label: `${r.nome} (${formatCurrency(r.valor)})`, valor: r.valor, nome: r.nome }))
   const opcoesDespesas = despesasMes.map(d => ({ value: `des_${d.id}`, label: `${d.descricao} (${formatCurrency(d.valor)})`, valor: d.valor, nome: d.descricao }))
+  const opcoesParcelas = parcelasMes.map(p => ({ 
+    value: `par_${p.id}`, 
+    label: `${getCartaoNome(p.cartaoId)} - ${p.descricao} (${p.numero}/${p.totalParcelas}) - ${formatCurrency(p.valor)}`, 
+    valor: p.valor, 
+    nome: `${getCartaoNome(p.cartaoId)} - ${p.descricao} (${p.numero}/${p.totalParcelas})` 
+  }))
+
+  let opcoesAtuais = []
+  if (tipoNovaConta === 'recorrente') opcoesAtuais = opcoesRecorrentes
+  else if (tipoNovaConta === 'despesa') opcoesAtuais = opcoesDespesas
+  else if (tipoNovaConta === 'parcela') opcoesAtuais = opcoesParcelas
+
+  // Se estiver vazio, coloca uma opção falsa para o select não quebrar
+  const opcoesSelect = opcoesAtuais.length > 0 ? opcoesAtuais : [{ value: '', label: 'Nenhuma conta encontrada neste mês' }]
 
   async function handleCriarConta(e) {
     e.preventDefault()
-    if (!contaSelecionadaId) return alert('Selecione uma conta.')
+    if (!contaSelecionadaId) return alert('Selecione uma conta válida.')
     
-    // Encontra a opção escolhida para pegar o nome e o valor
-    const opcoes = tipoNovaConta === 'recorrente' ? opcoesRecorrentes : opcoesDespesas
-    const escolhida = opcoes.find(o => o.value === contaSelecionadaId)
+    const escolhida = opcoesAtuais.find(o => o.value === contaSelecionadaId)
     if (!escolhida) return
 
     setLoading(true)
@@ -80,7 +104,7 @@ export default function Cofrinho() {
 
     if (acaoMov === 'retirar') {
       if (valor > contaMov.valorGuardado) return alert('Você não pode retirar mais do que tem guardado.')
-      valor = valor * -1 // Torna negativo para subtrair
+      valor = valor * -1
     }
 
     setLoading(true)
@@ -99,7 +123,6 @@ export default function Cofrinho() {
     setOpenMov(true)
   }
 
-  // Cálculos do mês
   const totalContas = contasDoMes.reduce((a, c) => a + Number(c.valorTotal), 0)
   const totalGuardado = contasDoMes.reduce((a, c) => a + Number(c.valorGuardado), 0)
   const totalFalta = Math.max(0, totalContas - totalGuardado)
@@ -114,7 +137,6 @@ export default function Cofrinho() {
         <Button onClick={() => setOpenNovo(true)}>+ Adicionar ao Cofrinho</Button>
       </div>
 
-      {/* Resumo */}
       <div className="grid grid-cols-3 gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
         <div>
           <p className="text-xs text-gray-500 font-semibold uppercase">Total de Contas</p>
@@ -130,7 +152,6 @@ export default function Cofrinho() {
         </div>
       </div>
 
-      {/* Lista */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {contasDoMes.length === 0 ? (
           <p className="p-6 text-sm text-gray-500 text-center">Nenhuma conta adicionada ao cofrinho neste mês.</p>
@@ -194,20 +215,26 @@ export default function Cofrinho() {
         <form onSubmit={handleCriarConta} className="space-y-3">
           <Select 
             label="De onde vem esta conta?" 
-            options={[{value: 'recorrente', label: 'Conta Recorrente'}, {value: 'despesa', label: 'Despesa do Mês'}]} 
+            options={[
+              {value: 'recorrente', label: 'Conta Recorrente'},
+              {value: 'despesa', label: 'Despesa do Mês'},
+              {value: 'parcela', label: 'Fatura de Cartão (Parcela)'} // <-- NOVA OPÇÃO
+            ]} 
             value={tipoNovaConta} 
             onChange={e => { setTipoNovaConta(e.target.value); setContaSelecionadaId('') }} 
           />
           
           <Select 
             label="Selecione a conta" 
-            options={tipoNovaConta === 'recorrente' ? opcoesRecorrentes : opcoesDespesas} 
+            options={opcoesSelect} 
             value={contaSelecionadaId} 
             onChange={e => setContaSelecionadaId(e.target.value)} 
             required
           />
           
-          <Button type="submit" disabled={loading} className="w-full mt-2">Adicionar ao Cofrinho</Button>
+          <Button type="submit" disabled={loading || opcoesAtuais.length === 0} className="w-full mt-2">
+            Adicionar ao Cofrinho
+          </Button>
         </form>
       </Modal>
 
