@@ -15,12 +15,12 @@ export function observarContasGuardadas(uid, callback) {
 export function criarContaCofrinho(uid, dados) {
   return addDoc(collection(db, COL), { 
     ...dados, 
+    uid: uid, // <-- ISSO É O QUE O FIREBASE PRECISA PARA NÃO DAR ERRO
     valorGuardado: 0,
     criadoEm: serverTimestamp() 
   })
 }
 
-// Depositar ou Retirar. Aceita valores negativos para retirada.
 export function alterarValorCofrinho(id, valor) {
   return updateDoc(doc(db, COL, id), {
     valorGuardado: increment(Number(valor))
