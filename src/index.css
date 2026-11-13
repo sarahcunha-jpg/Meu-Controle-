@@ -5,7 +5,12 @@
 html, body, #root { height: 100%; }
 body { 
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-  background-color: #f8fafc; /* Fundo mais moderno */
+  background-color: #f8fafc; 
   color: #1e293b;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s, color 0.3s;
+}
+html.dark body {
+  background-color: #0f172a; /* Fundo escuro */
+  color: #f8fafc;
 }

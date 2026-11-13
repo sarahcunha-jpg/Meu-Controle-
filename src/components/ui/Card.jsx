@@ -4,10 +4,9 @@ export function Card({ title, value, color = 'primary', subtitle }) {
     success: 'from-green-500 to-green-600 text-white',
     danger: 'from-red-500 to-red-600 text-white',
     warning: 'from-yellow-400 to-yellow-500 text-white',
-    gray: 'from-gray-100 to-gray-200 text-gray-800',
+    gray: 'from-gray-100 to-gray-200 text-gray-800 dark:from-gray-700 dark:to-gray-800 dark:text-white',
     dark: 'from-gray-800 to-gray-900 text-white'
   }
-  
   return (
     <div className={`rounded-2xl shadow-md p-5 bg-gradient-to-br ${colors[color]} transition-transform hover:scale-[1.02] duration-200`}>
       <p className="text-sm font-medium opacity-90">{title}</p>
