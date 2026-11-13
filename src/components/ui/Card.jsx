@@ -1,16 +1,18 @@
 export function Card({ title, value, color = 'primary', subtitle }) {
   const colors = {
-    primary: 'text-blue-700',
-    success: 'text-green-700',
-    danger: 'text-red-700',
-    warning: 'text-yellow-700',
-    gray: 'text-gray-700'
+    primary: 'from-blue-500 to-blue-600 text-white',
+    success: 'from-green-500 to-green-600 text-white',
+    danger: 'from-red-500 to-red-600 text-white',
+    warning: 'from-yellow-400 to-yellow-500 text-white',
+    gray: 'from-gray-100 to-gray-200 text-gray-800',
+    dark: 'from-gray-800 to-gray-900 text-white'
   }
+  
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-      <p className="text-sm text-gray-600">{title}</p>
-      <p className={`text-2xl font-bold mt-2 ${colors[color]}`}>{value}</p>
-      {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+    <div className={`rounded-2xl shadow-md p-5 bg-gradient-to-br ${colors[color]} transition-transform hover:scale-[1.02] duration-200`}>
+      <p className="text-sm font-medium opacity-90">{title}</p>
+      <p className="text-2xl font-black mt-2">{value}</p>
+      {subtitle && <p className="text-xs opacity-75 mt-1 font-semibold">{subtitle}</p>}
     </div>
   )
 }
