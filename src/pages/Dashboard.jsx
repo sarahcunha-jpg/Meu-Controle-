@@ -36,17 +36,14 @@ export default function Dashboard() {
     return () => { u1(); u2(); u3(); u4(); u5(); u6() }
   }, [user])
 
-  // Receitas e Despesas Básicas
   const resumo = resumoDashboard(receitas, despesas, dataReferencia)
   const despesasMes = filtrarMes(despesas, dataReferencia)
   const porCategoria = gastosPorCategoria(despesasMes)
   
-  // === CÁLCULOS DE PARCELAS ===
   const parcelasMes = filtrarMes(parcelas, dataReferencia, 'dataVencimento')
   const parcelasPagas = parcelasMes.filter(p => p.status === 'paga').reduce((a, p) => a + Number(p.valor), 0)
   const parcelasPendentes = parcelasMes.filter(p => p.status === 'pendente').reduce((a, p) => a + Number(p.valor), 0)
 
-  // === CÁLCULOS DE RECORRENTES ===
   const getStatusRec = (id) => {
     const s = statusRec.find(r => r.recorrenteId === id && Number(r.ano) === Number(ano) && Number(r.mes) === Number(mes + 1))
     return s ? s.status : 'pendente'
@@ -54,7 +51,6 @@ export default function Dashboard() {
   const recPagas = recorrentes.filter(r => getStatusRec(r.id) === 'paga').reduce((a, r) => a + Number(r.valor), 0)
   const recPendentes = recorrentes.filter(r => getStatusRec(r.id) === 'pendente').reduce((a, r) => a + Number(r.valor), 0)
 
-  // === CONSOLIDAÇÃO ===
   const totalDespesasConsolidadas = resumo.despesasMes + parcelasPagas + parcelasPendentes + recPagas + recPendentes
   const saldoReal = resumo.receitasMes - totalDespesasConsolidadas
 
@@ -72,26 +68,22 @@ export default function Dashboard() {
         <p className="text-sm font-medium text-gray-500">Visão de {MESES[mes]} de {ano}</p>
       </div>
 
-      {/* Cards Principais */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card title="Receitas" value={formatCurrency(resumo.receitasMes)} color="success" />
         <Card title="Despesas Totais" value={formatCurrency(totalDespesasConsolidadas)} color="danger" subtitle="Avulsas + Fixas + Parcelas" />
         <Card title="Saldo do Mês" value={formatCurrency(saldoReal)} color={saldoReal >= 0 ? 'primary' : 'dark'} />
-        <Card title="Cofrinho" value={formatCurrency(totalGuardado)} color="warning" subtitle="Guardado para contas" />
+        <Card title="Guardado no Cofrinho" value={formatCurrency(totalGuardado)} color="warning" subtitle="Para pagar contas" />
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
         
-        {/* BALANÇO DE CONTAS DETALHADO */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 col-span-1 md:col-span-1">
+        {/* BALANÇO DE CONTAS */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 col-span-1 flex flex-col">
           <div className="flex justify-between items-end mb-4">
             <h3 className="font-bold text-gray-800 text-lg">Balanço de Contas</h3>
-            <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              Total: {formatCurrency(totalPagoGeral + totalFaltaPagarGeral)}
-            </span>
           </div>
           
-          <div className="space-y-5">
+          <div className="space-y-5 flex-1">
             {/* BLOCO 1: CONTAS RECORRENTES */}
             <div>
               <div className="flex justify-between text-sm mb-1">
@@ -121,6 +113,34 @@ export default function Dashboard() {
                 <div className="h-full bg-orange-500" style={{ width: `${(parcelasPagas / (parcelasPagas + parcelasPendentes || 1)) * 100}%` }}></div>
               </div>
             </div>
+
+            {/* BLOCO 3: O COFRINHO DETALHADO */}
+            <div className="pt-3 border-t border-gray-100">
+              <div className="flex justify-between text-sm mb-3">
+                <span className="font-bold text-gray-700 flex items-center gap-1">🐷 Cofrinho</span>
+              </div>
+              
+              {cofrinhoMes.length === 0 ? (
+                <p className="text-xs text-gray-400">Nenhuma conta no cofrinho.</p>
+              ) : (
+                <div className="space-y-3">
+                  {cofrinhoMes.map(c => {
+                    const pct = Math.min(100, (Number(c.valorGuardado) / Number(c.valorTotal)) * 100)
+                    return (
+                      <div key={c.id}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-600 font-medium truncate max-w-[120px]" title={c.nome}>{c.nome}</span>
+                          <span className="text-gray-500 font-bold">{formatCurrency(c.valorGuardado)} de {formatCurrency(c.valorTotal)}</span>
+                        </div>
+                        <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-500" style={{ width: `${pct}%` }}></div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="bg-blue-50 p-3 rounded-xl mt-5 text-xs text-blue-800 font-medium text-center">
@@ -131,7 +151,7 @@ export default function Dashboard() {
         {/* Gráfico Receitas x Despesas */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 col-span-2">
           <h3 className="font-bold text-gray-800 mb-2 text-lg">Receitas x Despesas</h3>
-          <div className="h-56">
+          <div className="h-64">
             <ResponsiveContainer>
               <BarChart data={[
                 { nome: 'Receitas', valor: resumo.receitasMes },

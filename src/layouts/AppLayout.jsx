@@ -32,8 +32,9 @@ export function AppLayout({ children }) {
   async function handleLogout() { await logout(); navigate('/login') }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* HEADER */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm w-full">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button className="md:hidden text-2xl text-slate-700" onClick={() => setOpen(!open)}>☰</button>
@@ -57,9 +58,17 @@ export function AppLayout({ children }) {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 flex gap-6">
-        <aside className={`${open ? 'block' : 'hidden'} md:block fixed md:static inset-0 md:inset-auto bg-white md:bg-transparent z-30 md:z-auto pt-16 md:pt-0 overflow-y-auto`}>
-          <div className="bg-white md:rounded-2xl md:shadow-sm md:border md:border-slate-200 p-3 w-60 sticky top-24">
+      {/* LAYOUT PRINCIPAL COM FLEXBOX CORRIGIDO */}
+      <div className="flex-1 w-full max-w-7xl mx-auto flex">
+        
+        {/* MENU LATERAL */}
+        <aside className={`
+          ${open ? 'translate-x-0' : '-translate-x-full'} 
+          md:translate-x-0 fixed md:sticky top-16 md:top-16 left-0 z-30 
+          w-64 h-[calc(100vh-4rem)] bg-white md:bg-transparent border-r md:border-none border-slate-200
+          transition-transform duration-300 ease-in-out p-4 overflow-y-auto flex-shrink-0
+        `}>
+          <div className="bg-white md:rounded-2xl md:shadow-sm md:border md:border-slate-200 p-3">
             <nav className="flex flex-col gap-1">
               {links.map(l => (
                 <NavLink key={l.to} to={l.to} onClick={() => setOpen(false)} end={l.to === '/'}
@@ -71,7 +80,11 @@ export function AppLayout({ children }) {
             </nav>
           </div>
         </aside>
-        <main className="flex-1 min-w-0">{children}</main>
+
+        {/* CONTEÚDO */}
+        <main className="flex-1 min-w-0 p-4 md:p-6">
+          {children}
+        </main>
       </div>
     </div>
   )
