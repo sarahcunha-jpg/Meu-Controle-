@@ -147,10 +147,10 @@ export default function Cofrinho() {
     <div className="space-y-4 max-w-4xl mx-auto">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cofrinho de Contas</h1>
-          <p className="text-sm text-gray-600">Separe o dinheiro para pagar suas contas de {MESES[mes]}</p>
+          <h1 className="text-2xl font-bold text-gray-900">Reserva de Contas</h1>
+          <p className="text-sm text-gray-600">Guarde o dinheiro das suas contas aos poucos de {MESES[mes]}</p>
         </div>
-        <Button onClick={abrirNovoModal}>+ Adicionar ao Cofrinho</Button>
+        <Button onClick={abrirNovoModal}>+ Adicionar à Reserva</Button>
       </div>
 
       <div className="grid grid-cols-3 gap-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
@@ -170,7 +170,7 @@ export default function Cofrinho() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {contasDoMes.length === 0 ? (
-          <p className="p-6 text-sm text-gray-500 text-center">Nenhuma conta adicionada ao cofrinho neste mês.</p>
+          <p className="p-6 text-sm text-gray-500 text-center">Nenhuma conta adicionada à reserva neste mês.</p>
         ) : (
           <div className="divide-y divide-gray-100">
             {contasDoMes.map(c => {
@@ -226,7 +226,7 @@ export default function Cofrinho() {
         )}
       </div>
 
-      <Modal open={openNovo} onClose={() => setOpenNovo(false)} title="Adicionar Conta ao Cofrinho">
+      <Modal open={openNovo} onClose={() => setOpenNovo(false)} title="Adicionar Conta à Reserva">
         <form onSubmit={handleCriarConta} className="space-y-3">
           <Select 
             label="De onde vem esta conta?" 
@@ -248,7 +248,7 @@ export default function Cofrinho() {
           />
           
           <Button type="submit" disabled={loading || opcoesAtuais.length === 0} className="w-full mt-2">
-            Adicionar ao Cofrinho
+            Adicionar à Reserva
           </Button>
         </form>
       </Modal>

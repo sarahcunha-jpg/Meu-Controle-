@@ -78,8 +78,8 @@ export default function Metas() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Metas Financeiras</h1>
-          <p className="text-sm text-gray-600">O que você quer conquistar?</p>
+          <h1 className="text-2xl font-bold text-gray-900">Cofrinho</h1>
+          <p className="text-sm text-gray-600">Suas metas e objetivos de vida</p>
         </div>
         <Button onClick={() => setOpen(true)}>+ Nova Meta</Button>
       </div>

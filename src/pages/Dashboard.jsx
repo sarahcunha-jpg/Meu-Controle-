@@ -83,7 +83,7 @@ export default function Dashboard() {
         <Card title="Receitas" value={formatCurrency(resumo.receitasMes)} color="success" />
         <Card title="Despesas Totais" value={formatCurrency(totalDespesasConsolidadas)} color="danger" subtitle="Tudo o que foi gasto" />
         <Card title="Saldo do Mês" value={formatCurrency(saldoReal)} color={saldoReal >= 0 ? 'primary' : 'dark'} />
-        <Card title="Guardado no Cofrinho" value={formatCurrency(totalGuardado)} color="warning" subtitle="Já separado" />
+        <Card title="Guardado na Reserva" value={formatCurrency(totalGuardado)} color="warning" subtitle="Já separado" />
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
@@ -131,7 +131,7 @@ export default function Dashboard() {
 
             <div className="pt-3 border-t border-gray-100 dark:border-slate-700">
               <div className="flex justify-between text-sm mb-3">
-                <span className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">🐷 Cofrinho</span>
+                <span className="font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1">🐷 Reserva de Contas</span>
               </div>
               
               {cofrinhoMes.length === 0 ? (
