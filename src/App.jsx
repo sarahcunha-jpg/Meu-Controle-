@@ -2,6 +2,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { DateProvider } from './contexts/DateContext'
 import { ThemeProvider } from './contexts/ThemeContext'
+import { ToastProvider } from './contexts/ToastContext'
 import { AppRoutes } from './routes/AppRoutes'
 
 export default function App() {
@@ -10,7 +11,9 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <DateProvider>
-            <AppRoutes />
+            <ToastProvider>
+              <AppRoutes />
+            </ToastProvider>
           </DateProvider>
         </AuthProvider>
       </ThemeProvider>

@@ -4,7 +4,6 @@ import { useDate } from '../../contexts/DateContext'
 import { observarOrcamentos } from '../../services/orcamentosService'
 import { observarCartoes } from '../../services/cartoesService'
 import { observarParcelas } from '../../services/comprasService'
-import { observarRecorrentes } from '../../services/recorrentesService'
 import { observarDespesas } from '../../services/despesasService'
 import { limiteUsadoCartao, filtrarMes, gastosPorCategoria } from '../../utils/calculos'
 import { formatCurrency } from '../../utils/formatCurrency'
@@ -16,7 +15,6 @@ export function NotificationBell() {
   
   const [cartoes, setCartoes] = useState([])
   const [parcelas, setParcelas] = useState([])
-  const [recorrentes, setRecorrentes] = useState([])
   const [orcamentos, setOrcamentos] = useState([])
   const [despesas, setDespesas] = useState([])
 
@@ -24,52 +22,44 @@ export function NotificationBell() {
     if (!user) return
     const u1 = observarCartoes(user.uid, setCartoes)
     const u2 = observarParcelas(user.uid, setParcelas)
-    const u3 = observarRecorrentes(user.uid, setRecorrentes)
-    const u4 = observarOrcamentos(user.uid, setOrcamentos)
-    const u5 = observarDespesas(user.uid, setDespesas)
-    return () => { u1(); u2(); u3(); u4(); u5() }
+    const u3 = observarOrcamentos(user.uid, setOrcamentos)
+    const u4 = observarDespesas(user.uid, setDespesas)
+    return () => { u1(); u2(); u3(); u4() }
   }, [user])
 
   const alertas = []
+  const hoje = new Date()
 
-  // 1. Cartões acima de 80%
+  // 1. Cartões (Limite e Fechamento)
   cartoes.forEach(c => {
     const usado = limiteUsadoCartao(parcelas, c.id)
     if (usado / c.limite >= 0.8) {
       alertas.push({ id: `cartao-${c.id}`, tipo: 'danger', msg: `Cartão ${c.nome} está com ${((usado/c.limite)*100).toFixed(0)}% do limite usado.` })
     }
+
+    // Lembrete de Fechamento
+    const diaFech = Number(c.diaFechamento)
+    const diffDias = diaFech - hoje.getDate()
+    if (diffDias >= 0 && diffDias <= 3) {
+      alertas.push({ id: `fech-${c.id}`, tipo: 'warning', msg: `A fatura do cartão ${c.nome} fecha em ${diffDias === 0 ? 'hoje' : diffDias + ' dias'}. Evite novas compras!` })
+    }
   })
 
-  // 2. Orçamentos estourados
+  // 2. Orçamentos
   const despesasMes = filtrarMes(despesas, dataReferencia)
   const gastosCat = gastosPorCategoria(despesasMes)
   orcamentos.forEach(o => {
     const gasto = gastosCat.find(g => g.categoria === o.categoria)?.valor || 0
     if (gasto > o.limite) {
-      alertas.push({ id: `orc-${o.id}`, tipo: 'danger', msg: `Orçamento de ${o.categoria} estourado (${formatCurrency(gasto)} de ${formatCurrency(o.limite)}).` })
+      alertas.push({ id: `orc-${o.id}`, tipo: 'danger', msg: `Orçamento de ${o.categoria} estourado.` })
     }
   })
-
-  // 3. Parcelas vencendo em breve (próximos 5 dias)
-  const hoje = new Date()
-  parcelas.filter(p => p.status === 'pendente').forEach(p => {
-    const venc = new Date(p.dataVencimento + 'T12:00:00')
-    const diff = (venc - hoje) / (1000 * 60 * 60 * 24)
-    if (diff >= 0 && diff <= 5) {
-      alertas.push({ id: `parc-${p.id}`, tipo: 'warning', msg: `Parcela "${p.descricao}" vence em ${Math.ceil(diff)} dias (${formatCurrency(p.valor)}).` })
-    }
-  })
-
-  // 4. Contas fixas pendentes no mês
-  // (Lógica simplificada para não pesar o componente)
 
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)} className="relative p-2 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors">
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-        {alertas.length > 0 && (
-          <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
-        )}
+        {alertas.length > 0 && <span className="absolute top-1 right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-800 animate-pulse"></span>}
       </button>
 
       {open && (
