@@ -12,11 +12,10 @@ export default function Metas() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ nome: '', valorAlvo: '', valorAtual: '' })
   
-  // Estados para o modal de movimentação
   const [openMov, setOpenMov] = useState(false)
   const [metaSelecionada, setMetaSelecionada] = useState(null)
   const [valorMov, setValorMov] = useState('')
-  const [tipoMov, setTipoMov] = useState('add') // 'add' ou 'sub'
+  const [tipoMov, setTipoMov] = useState('add')
 
   const [loading, setLoading] = useState(false)
 
@@ -61,7 +60,7 @@ export default function Metas() {
       setValorMov('')
       setMetaSelecionada(null)
     } catch (err) {
-      alert('Erro ao atualizar meta: ' + err.message)
+      alert('Erro ao atualizar cofrinho: ' + err.message)
     } finally {
       setLoading(false)
     }
@@ -75,13 +74,13 @@ export default function Metas() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cofrinho</h1>
-          <p className="text-sm text-gray-600">Suas metas e objetivos de vida</p>
+          <h1 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">Cofrinho</h1>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Suas metas e objetivos de vida</p>
         </div>
-        <Button onClick={() => setOpen(true)}>+ Nova Meta</Button>
+        <Button onClick={() => setOpen(true)}>+ Novo Objetivo</Button>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -91,38 +90,37 @@ export default function Metas() {
           const concluida = m.valorAtual >= m.valorAlvo
 
           return (
-            <div key={m.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-gray-800 text-lg">{m.nome}</h3>
-                <button onClick={() => excluirMeta(m.id)} className="text-red-500 text-xs hover:underline">Excluir</button>
+            <div key={m.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 relative transition-colors">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="font-bold text-gray-800 dark:text-white text-lg">{m.nome}</h3>
+                <button onClick={() => excluirMeta(m.id)} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase">Excluir</button>
               </div>
               
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-green-600 font-bold">{formatCurrency(m.valorAtual)}</span>
-                <span className="text-gray-500">de {formatCurrency(m.valorAlvo)}</span>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-green-600 dark:text-green-400 font-bold">{formatCurrency(m.valorAtual)}</span>
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Meta: {formatCurrency(m.valorAlvo)}</span>
               </div>
               
-              <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+              <div className="w-full bg-gray-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden">
                 <div className={`h-full ${concluida ? 'bg-green-500' : 'bg-primary-500'}`} style={{ width: `${pct}%` }}></div>
               </div>
               
-              <div className="flex justify-between text-xs text-gray-500 mt-2 mb-4">
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2 mb-5">
                 <span>{pct.toFixed(0)}% concluído</span>
-                <span>{concluida ? 'Meta atingida! 🎉' : `Faltam ${formatCurrency(restante)}`}</span>
+                <span>{concluida ? 'Objetivo atingido! 🎉' : `Faltam ${formatCurrency(restante)}`}</span>
               </div>
 
-              {/* Botões de movimentação */}
               <div className="flex gap-2">
                 <Button 
                   variant="secondary" 
-                  className="flex-1 text-xs py-1"
+                  className="flex-1 text-xs py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
                   onClick={() => abrirMovimentacao(m, 'add')}
                 >
                   + Guardar
                 </Button>
                 <Button 
                   variant="ghost" 
-                  className="flex-1 text-xs py-1 border border-gray-200"
+                  className="flex-1 text-xs py-2 border border-slate-200 dark:border-slate-600 dark:text-white dark:hover:bg-slate-700"
                   onClick={() => abrirMovimentacao(m, 'sub')}
                 >
                   - Resgatar
@@ -131,34 +129,39 @@ export default function Metas() {
             </div>
           )
         })}
-        {metas.length === 0 && <p className="text-gray-500 text-sm">Nenhuma meta cadastrada.</p>}
+        {metas.length === 0 && (
+          <div className="col-span-full bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 text-center">
+            <p className="text-gray-500 dark:text-gray-400">Você ainda não tem nenhum objetivo. Que tal criar um?</p>
+          </div>
+        )}
       </div>
 
       {/* Modal de Nova Meta */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Nova Meta">
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <Input label="Nome da Meta (ex: Viagem)" required value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} />
-          <div className="grid grid-cols-2 gap-2">
+      <Modal open={open} onClose={() => setOpen(false)} title="Novo Objetivo">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input label="Nome do Objetivo (ex: Viagem, Carro)" required value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} />
+          <div className="grid grid-cols-2 gap-3">
             <Input label="Valor Alvo (R$)" type="number" step="0.01" required value={form.valorAlvo} onChange={e => setForm({...form, valorAlvo: e.target.value})} />
             <Input label="Já guardado (R$)" type="number" step="0.01" value={form.valorAtual} onChange={e => setForm({...form, valorAtual: e.target.value})} />
           </div>
-          <Button type="submit" disabled={loading} className="w-full">Salvar Meta</Button>
+          <Button type="submit" disabled={loading} className="w-full">Salvar Objetivo</Button>
         </form>
       </Modal>
 
-      {/* Modal de Movimentação (Guardar / Resgatar) */}
+      {/* Modal de Movimentação */}
       <Modal 
         open={openMov} 
         onClose={() => setOpenMov(false)} 
-        title={tipoMov === 'add' ? `Guardar dinheiro para: ${metaSelecionada?.nome}` : `Resgatar dinheiro de: ${metaSelecionada?.nome}`}
+        title={tipoMov === 'add' ? `Guardar em: ${metaSelecionada?.nome}` : `Resgatar de: ${metaSelecionada?.nome}`}
       >
         <form onSubmit={handleMovimentar} className="space-y-4">
-          <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 text-center border border-gray-100">
-            Saldo atual da meta: <strong>{formatCurrency(metaSelecionada?.valorAtual || 0)}</strong>
+          <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl text-sm text-gray-700 dark:text-gray-300 text-center border border-slate-100 dark:border-slate-600">
+            Saldo atual deste objetivo: <br/>
+            <strong className="text-xl text-green-600 dark:text-green-400">{formatCurrency(metaSelecionada?.valorAtual || 0)}</strong>
           </div>
           
           <Input 
-            label="Valor da Movimentação (R$)" 
+            label="Valor (R$)" 
             type="number" 
             step="0.01" 
             min="0.01"
@@ -171,7 +174,7 @@ export default function Metas() {
           <Button 
             type="submit" 
             disabled={loading} 
-            className={`w-full ${tipoMov === 'sub' ? 'bg-red-600 hover:bg-red-700' : ''}`}
+            className={`w-full ${tipoMov === 'sub' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
           >
             {loading ? 'Processando...' : tipoMov === 'add' ? 'Confirmar Depósito' : 'Confirmar Resgate'}
           </Button>
