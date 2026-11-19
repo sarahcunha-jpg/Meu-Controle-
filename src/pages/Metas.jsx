@@ -10,8 +10,12 @@ export default function Metas() {
   const { user } = useAuth()
   const [metas, setMetas] = useState([])
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ nome: '', valorAlvo: '', valorAtual: '' })
   
+  // Estados para o formulário (Criar / Editar)
+  const [form, setForm] = useState({ nome: '', valorAlvo: '', valorAtual: '' })
+  const [metaEditando, setMetaEditando] = useState(null)
+  
+  // Estados para movimentação (Guardar / Resgatar)
   const [openMov, setOpenMov] = useState(false)
   const [metaSelecionada, setMetaSelecionada] = useState(null)
   const [valorMov, setValorMov] = useState('')
@@ -24,18 +28,39 @@ export default function Metas() {
     return observarMetas(user.uid, setMetas)
   }, [user])
 
+  // Abre o modal para criar ou editar
+  function abrirModal(meta = null) {
+    if (meta) {
+      setMetaEditando(meta)
+      setForm({ nome: meta.nome, valorAlvo: meta.valorAlvo, valorAtual: meta.valorAtual })
+    } else {
+      setMetaEditando(null)
+      setForm({ nome: '', valorAlvo: '', valorAtual: '' })
+    }
+    setOpen(true)
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
     try {
-      await criarMeta(user.uid, { 
-        nome: form.nome, 
-        valorAlvo: Number(form.valorAlvo), 
-        valorAtual: Number(form.valorAtual) || 0 
-      })
+      const dados = {
+        nome: form.nome,
+        valorAlvo: Number(form.valorAlvo),
+        valorAtual: Number(form.valorAtual) || 0
+      }
+
+      if (metaEditando) {
+        await atualizarMeta(metaEditando.id, dados)
+      } else {
+        await criarMeta(user.uid, dados)
+      }
       setOpen(false)
-      setForm({ nome: '', valorAlvo: '', valorAtual: '' })
-    } finally { setLoading(false) }
+    } catch (err) {
+      alert('Erro ao salvar: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleMovimentar(e) {
@@ -80,7 +105,7 @@ export default function Metas() {
           <h1 className="text-3xl font-black text-gray-800 dark:text-white tracking-tight">Cofrinho</h1>
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Suas metas e objetivos de vida</p>
         </div>
-        <Button onClick={() => setOpen(true)}>+ Novo Objetivo</Button>
+        <Button onClick={() => abrirModal()}>+ Novo Objetivo</Button>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -93,7 +118,12 @@ export default function Metas() {
             <div key={m.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 relative transition-colors">
               <div className="flex justify-between items-start mb-4">
                 <h3 className="font-bold text-gray-800 dark:text-white text-lg">{m.nome}</h3>
-                <button onClick={() => excluirMeta(m.id)} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase">Excluir</button>
+                <div className="flex gap-3">
+                  <button onClick={() => abrirModal(m)} className="text-blue-500 hover:text-blue-700 text-xs font-bold uppercase">Editar</button>
+                  <button onClick={() => {
+                    if(window.confirm('Excluir este objetivo?')) excluirMeta(m.id)
+                  }} className="text-red-500 hover:text-red-700 text-xs font-bold uppercase">Excluir</button>
+                </div>
               </div>
               
               <div className="flex justify-between text-sm mb-2">
@@ -136,19 +166,21 @@ export default function Metas() {
         )}
       </div>
 
-      {/* Modal de Nova Meta */}
-      <Modal open={open} onClose={() => setOpen(false)} title="Novo Objetivo">
+      {/* Modal de Criar/Editar Meta */}
+      <Modal open={open} onClose={() => setOpen(false)} title={metaEditando ? 'Editar Objetivo' : 'Novo Objetivo'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input label="Nome do Objetivo (ex: Viagem, Carro)" required value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Valor Alvo (R$)" type="number" step="0.01" required value={form.valorAlvo} onChange={e => setForm({...form, valorAlvo: e.target.value})} />
-            <Input label="Já guardado (R$)" type="number" step="0.01" value={form.valorAtual} onChange={e => setForm({...form, valorAtual: e.target.value})} />
+            <Input label="Valor Guardado Atual (R$)" type="number" step="0.01" value={form.valorAtual} onChange={e => setForm({...form, valorAtual: e.target.value})} />
           </div>
-          <Button type="submit" disabled={loading} className="w-full">Salvar Objetivo</Button>
+          <Button type="submit" disabled={loading} className="w-full">
+            {metaEditando ? 'Salvar Alterações' : 'Criar Objetivo'}
+          </Button>
         </form>
       </Modal>
 
-      {/* Modal de Movimentação */}
+      {/* Modal de Movimentação (Guardar/Resgatar) */}
       <Modal 
         open={openMov} 
         onClose={() => setOpenMov(false)} 
@@ -161,7 +193,7 @@ export default function Metas() {
           </div>
           
           <Input 
-            label="Valor (R$)" 
+            label="Valor da Movimentação (R$)" 
             type="number" 
             step="0.01" 
             min="0.01"
